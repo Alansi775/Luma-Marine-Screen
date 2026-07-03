@@ -29,3 +29,9 @@ final class CacheException extends AppException {
 final class DataFormatException extends AppException {
   const DataFormatException(super.message, {super.cause});
 }
+
+/// Thrown when admin sign-in fails (wrong credentials, Firebase
+/// unavailable, etc). Only the admin-facing screens should ever see this.
+final class AuthException extends AppException {
+  const AuthException(super.message, {super.cause});
+}

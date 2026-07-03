@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   go_router: ^17.3.0
   drift: ^2.31.0
-  sqlite3_flutter_libs: ^0.6.0+eol
+  sqlite3_flutter_libs: ^0.5.42
   sqlite3: ^2.9.4
   path: ^1.9.1
   dio: ^5.10.0
@@ -48,6 +48,14 @@ dependencies:
   flutter_riverpod: ^3.3.1
   riverpod_annotation: ^4.0.2
   meta: ^1.17.0
+  drift_flutter: ^0.2.8
+  drift_dev: ^2.31.0
+  firebase_auth: ^6.5.4
+  file_picker: ^8.0.0
+  crypto: ^3.0.7
+  media_kit: ^1.2.6
+  media_kit_video: ^2.0.1
+  media_kit_libs_video: ^1.0.7
 
 dev_dependencies:
   flutter_test:
@@ -61,7 +69,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   riverpod_generator: ^4.0.3
-  drift_dev: ^2.31.0
   build_runner: ^2.15.0
 
 # For information on the generic Dart part of this file, see the
@@ -109,19 +116,24 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# NOTE: assets/icon/logo.png is a draft asset (converted + padded from a
-# non-transparent JPEG dropped in by the product owner). Replace it with
-# the real square, ideally transparent-background logo when available,
-# then rerun: dart run flutter_launcher_icons
+# assets/icon/LUMA_MARINE_logo_black.png and _white.png are the real
+# transparent-background logo (light and dark variants). The static app
+# icon below uses the black wordmark; the in-app splash
+# (lib/shared/widgets/bootstrap_screen.dart) picks whichever variant
+# reads correctly against the current theme's background.
 #
-# There is no flutter_native_splash config here: that package supports
-# only Android/iOS/Web, none of which this app targets. On flutter-pi
-# there's no OS-level splash surface to hook into before Dart runs
-# anyway — lib/shared/widgets/bootstrap_screen.dart is the real splash,
-# shown in-app while bootstrap() finishes its async setup.
+# There is no flutter_native_splash config here: on flutter-pi there's no
+# OS-level splash surface to hook into before Dart runs anyway —
+# bootstrap_screen.dart is the real splash for every platform this app
+# targets, shown in-app while bootstrap() finishes its async setup.
 flutter_launcher_icons:
-  image_path: "assets/icon/logo.png"
+  image_path: "assets/icon/LUMA_MARINE_logo_black.png"
   macos:
     generate: true
-    image_path: "assets/icon/logo.png"
+    image_path: "assets/icon/LUMA_MARINE_logo_black.png"
+  web:
+    generate: true
+    image_path: "assets/icon/LUMA_MARINE_logo_black.png"
+    background_color: "#FAFAFA"
+    theme_color: "#0E0E0E"
   android: false

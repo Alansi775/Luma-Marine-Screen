@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import '../../../../core/database/app_database.dart';
 import '../../domain/entities/video_asset.dart';
 import '../../domain/repositories/video_repository.dart';
@@ -21,7 +19,7 @@ class LocalVideoRepository implements VideoRepository {
       id: row.id,
       storagePath: row.storagePath,
       checksum: row.checksum,
-      localFile: row.localFilePath == null ? null : File(row.localFilePath!),
+      localFilePath: row.localFilePath,
     );
   }
 
@@ -32,8 +30,8 @@ class LocalVideoRepository implements VideoRepository {
   }
 
   @override
-  Future<File?> getLocalFile(String videoId) async {
+  Future<String?> getLocalFilePath(String videoId) async {
     final asset = await getById(videoId);
-    return asset?.localFile;
+    return asset?.localFilePath;
   }
 }

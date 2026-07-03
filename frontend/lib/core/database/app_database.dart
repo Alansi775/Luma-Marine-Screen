@@ -1,25 +1,19 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 
 import 'tables/playlist_entries_table.dart';
 import 'tables/videos_table.dart';
 
 part 'app_database.g.dart';
 
+/// Schema only — deliberately has no platform-specific imports (no
+/// `dart:io`, no `drift/native.dart`) so this file compiles everywhere,
+/// including Flutter Web. Platform-specific executor construction lives
+/// in `app_database_connection.dart` (native vs web, via `drift_flutter`,
+/// which handles that split internally) and in test files that only ever
+/// run natively.
 @DriftDatabase(tables: [PlaylistEntries, Videos])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
-
-  /// Opens (creating if necessary) the on-disk database at [file].
-  factory AppDatabase.file(File file) =>
-      AppDatabase(NativeDatabase.createInBackground(file));
-
-  /// In-memory database used as a last-resort fallback when the on-disk
-  /// database can't be opened (e.g. permissions) — playback should still
-  /// run, even if sync state won't survive a reboot in that scenario.
-  factory AppDatabase.inMemory() => AppDatabase(NativeDatabase.memory());
 
   @override
   int get schemaVersion => 1;

@@ -5,6 +5,11 @@ class FirestorePaths {
 
   static const videos = 'videos';
 
+  /// Device registration doesn't exist yet (see backend/schema/firestore-schema.md's
+  /// "documented, not yet created" section), so every install currently
+  /// targets this single well-known device id rather than a generated one.
+  static const defaultDeviceId = 'primary-screen';
+
   static String device(String deviceId) => 'devices/$deviceId';
 
   static String devicePlaylist(String deviceId) => '${device(deviceId)}/playlist';

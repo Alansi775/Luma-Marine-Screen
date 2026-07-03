@@ -38,9 +38,9 @@ class DiagnosticsScreen extends ConsumerWidget {
             label: 'Sync engine',
             value: syncService.isAvailable ? 'available' : 'unavailable',
           ),
-          _DiagnosticRow(label: 'Data directory', value: directories.appDataDirectory.path),
-          _DiagnosticRow(label: 'Videos directory', value: directories.videosDirectory.path),
-          _DiagnosticRow(label: 'Logs directory', value: directories.logsDirectory.path),
+          _DiagnosticRow(label: 'Data directory', value: directories.appDataDirectoryPath),
+          _DiagnosticRow(label: 'Videos directory', value: directories.videosDirectoryPath),
+          _DiagnosticRow(label: 'Logs directory', value: directories.logsDirectoryPath),
           _DiagnosticRow(
             label: 'Storage ready',
             value: directories.isReady ? 'yes' : 'no (using fallback or unwritable)',

@@ -1,25 +1,24 @@
-import 'dart:io';
-
 /// Resolves where the app stores its persistent data.
 ///
-/// Deliberately not backed by `path_provider`: its Linux implementation
-/// depends on platform-channel plugin registration, which is a risk area
-/// under flutter-pi's minimal plugin support. Implementations resolve
-/// paths directly instead, so this is the one seam to change if the
-/// resolution strategy ever needs to differ (e.g. a config file instead
-/// of an environment variable).
+/// Exposes plain path strings rather than `dart:io` `File`/`Directory`
+/// types so this interface (and everything that depends on it) stays
+/// compilable on every platform this app touches, including Flutter Web
+/// for fast UI preview during development — `dart:io` doesn't exist
+/// there. Implementations still use `dart:io` internally where real file
+/// I/O is possible; see `default_app_directories.dart`, which picks the
+/// right implementation per platform via a conditional export.
 abstract class AppDirectories {
   /// Root directory for all app data.
-  Directory get appDataDirectory;
+  String get appDataDirectoryPath;
 
   /// Where downloaded playlist videos are cached.
-  Directory get videosDirectory;
+  String get videosDirectoryPath;
 
   /// Where rotating log files are written.
-  Directory get logsDirectory;
+  String get logsDirectoryPath;
 
   /// Path to the local sqlite database file.
-  File get databaseFile;
+  String get databaseFilePath;
 
   /// Creates all required directories if missing.
   ///

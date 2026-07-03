@@ -13,8 +13,8 @@ import 'app_logger.dart';
 /// (one generation kept) before a fresh one is opened. This is a device
 /// that runs for months unattended — bounding disk usage matters more
 /// than sophisticated rotation policies.
-class FileLogger implements AppLogger {
-  FileLogger.consoleOnly() : _logger = logging.Logger('luma_marine') {
+class PlatformLogger implements AppLogger {
+  PlatformLogger.consoleOnly() : _logger = logging.Logger('luma_marine') {
     logging.Logger.root.level = logging.Level.ALL;
     // Kept alive for the app's lifetime; there's nothing to cancel this for.
     logging.Logger.root.onRecord.listen(_handleRecord);
@@ -41,11 +41,11 @@ class FileLogger implements AppLogger {
       _logger.severe(message, error, stackTrace);
 
   @override
-  Future<void> attachFileSink(Directory logDirectory) async {
+  Future<void> attachFileSink(String logDirectoryPath) async {
     try {
-      final file = File(p.join(logDirectory.path, 'luma_marine.log'));
+      final file = File(p.join(logDirectoryPath, 'luma_marine.log'));
       if (await file.exists() && await file.length() > _maxBytesBeforeRotation) {
-        final rotated = File(p.join(logDirectory.path, 'luma_marine.log.old'));
+        final rotated = File(p.join(logDirectoryPath, 'luma_marine.log.old'));
         if (await rotated.exists()) await rotated.delete();
         await file.rename(rotated.path);
       }

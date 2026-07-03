@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:drift/native.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,19 +18,18 @@ class _FakeLogger implements AppLogger {
   @override
   void error(String message, {Object? error, StackTrace? stackTrace}) {}
   @override
-  Future<void> attachFileSink(Directory logDirectory) async {}
+  Future<void> attachFileSink(String logDirectoryPath) async {}
 }
 
 class _FakeDirectories implements AppDirectories {
-  final _root = Directory.systemTemp;
   @override
-  Directory get appDataDirectory => _root;
+  String get appDataDirectoryPath => 'test';
   @override
-  Directory get videosDirectory => _root;
+  String get videosDirectoryPath => 'test/videos';
   @override
-  Directory get logsDirectory => _root;
+  String get logsDirectoryPath => 'test/logs';
   @override
-  File get databaseFile => File('${_root.path}/luma_marine_test.db');
+  String get databaseFilePath => 'test/luma_marine_test.db';
   @override
   bool get isReady => true;
   @override
@@ -45,7 +43,7 @@ void main() {
         overrides: [
           appLoggerProvider.overrideWithValue(_FakeLogger()),
           appDirectoriesProvider.overrideWithValue(_FakeDirectories()),
-          appDatabaseProvider.overrideWithValue(AppDatabase.inMemory()),
+          appDatabaseProvider.overrideWithValue(AppDatabase(NativeDatabase.memory())),
           firebaseAvailableProvider.overrideWithValue(false),
         ],
         child: const LumaMarineApp(),
