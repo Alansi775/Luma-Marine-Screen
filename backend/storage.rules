@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Default-deny, same reasoning as firestore.rules: no device auth exists
+// yet. Future shape once it does:
+//
+//   match /videos/{videoId} {
+//     allow read: if request.auth != null; // any authenticated device may read the shared catalog
+//     allow write: if false; // uploaded by an admin tool, not devices
+//   }
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Default-deny. There is no device authentication mechanism yet, so open
+// rules would be actively unsafe — every device would be able to read and
+// write every other device's playlist and the shared video catalog.
+//
+// Future shape (once device auth exists, e.g. via a custom auth claim or
+// App Check tied to a per-device credential provisioned at deployment
+// time):
+//
+//   match /videos/{videoId} {
+//     allow read: if isAuthenticatedDevice();
+//     allow write: if false; // catalog is managed by an admin tool, not devices
+//   }
+//
+//   match /devices/{deviceId} {
+//     allow read, write: if isAuthenticatedDevice() && request.auth.uid == deviceId;
+//
+//     match /playlist/{entryId} {
+//       allow read: if isAuthenticatedDevice() && request.auth.uid == deviceId;
+//       allow write: if false; // playlists are managed by an admin tool, not devices
+//     }
+//
+//     match /health/{logId} {
+//       allow read: if false;
+//       allow create: if isAuthenticatedDevice() && request.auth.uid == deviceId;
+//     }
+//
+//     match /commands/{commandId} {
+//       allow read: if isAuthenticatedDevice() && request.auth.uid == deviceId;
+//       allow write: if false; // commands are enqueued by an admin tool, not devices
+//     }
+//   }
+//
+//   function isAuthenticatedDevice() {
+//     return request.auth != null;
+//   }
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

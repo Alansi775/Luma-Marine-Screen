@@ -1,0 +1,19 @@
+# IDE
+.vscode/
+.idea/
+*.iml
+.DS_Store
+
+# Flutter/Dart (frontend/ has its own .gitignore too; this catches anything at repo root)
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/build/
+**/.pub-cache/
+**/.pub/
+
+# Firebase tooling
+**/firebase-debug.log
+**/.firebase/
+**/ui-debug.log
