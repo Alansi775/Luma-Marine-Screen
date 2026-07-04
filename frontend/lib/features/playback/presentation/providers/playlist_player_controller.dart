@@ -32,6 +32,7 @@ part 'playlist_player_controller.g.dart';
 class PlaylistPlayerController extends _$PlaylistPlayerController {
   List<String> _queue = [];
   String? _currentPath;
+  bool _advancing = false;
 
   @override
   VideoPlayerController? build() {
@@ -67,6 +68,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   Future<void> _playAt(int index) async {
     final path = _queue[index];
     _currentPath = path;
+    _advancing = false;
 
     // Dispose the outgoing controller *before* creating the next one:
     // flutter-pi's GStreamer/VAAPI decode session is a limited shared
@@ -83,7 +85,17 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
         : VideoPlayerController.file(File(path));
 
     controller.addListener(() {
-      if (controller.value.isCompleted) _playNext();
+      if (_advancing || !controller.value.isInitialized) return;
+      // Exact position == duration is unreliable — the platform's last
+      // position update often lands a few hundred milliseconds short of
+      // the true end, so isCompleted alone can just never become true and
+      // the playlist stalls forever on the last video. A small tolerance
+      // catches "effectively finished" the same way.
+      final remaining = controller.value.duration - controller.value.position;
+      if (controller.value.isCompleted || remaining <= const Duration(milliseconds: 300)) {
+        _advancing = true;
+        _playNext();
+      }
     });
 
     await controller.initialize();
