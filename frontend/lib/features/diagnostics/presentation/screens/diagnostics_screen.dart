@@ -25,6 +25,7 @@ class DiagnosticsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          const SizedBox(height: 8),
           _DiagnosticRow(label: 'Device ID', value: deviceId.when(
             data: (id) => id,
             loading: () => 'resolving…',
@@ -61,17 +62,15 @@ class _DiagnosticRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 160,
-            child: Text(label, style: theme.textTheme.labelLarge),
-          ),
-          Expanded(
-            child: Text(value, style: theme.textTheme.bodyMedium),
-          ),
+          Text(label.toUpperCase(), style: theme.textTheme.labelSmall),
+          const SizedBox(height: 4),
+          Text(value, style: theme.textTheme.bodyLarge),
+          const SizedBox(height: 14),
+          Divider(height: 1, color: theme.colorScheme.outline.withValues(alpha: 0.5)),
         ],
       ),
     );

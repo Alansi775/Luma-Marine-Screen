@@ -19,6 +19,7 @@ class FirebaseVideoUploadService implements VideoUploadService {
   Future<void> uploadVideo({
     required Uint8List bytes,
     required String fileName,
+    required String playlistId,
     void Function(double progress)? onProgress,
   }) async {
     try {
@@ -26,6 +27,9 @@ class FirebaseVideoUploadService implements VideoUploadService {
       final extension = fileName.contains('.') ? fileName.split('.').last : 'mp4';
       final storagePath = '${FirestorePaths.videos}/$videoId.$extension';
       final checksum = md5.convert(bytes).toString();
+      final displayName = fileName.contains('.')
+          ? fileName.substring(0, fileName.lastIndexOf('.'))
+          : fileName;
 
       final uploadTask = _storage.ref(storagePath).putData(
             bytes,
@@ -39,25 +43,25 @@ class FirebaseVideoUploadService implements VideoUploadService {
       await uploadTask;
 
       await _firestore.collection(FirestorePaths.videos).doc(videoId).set({
+        'name': displayName,
         'storagePath': storagePath,
         'checksum': checksum,
         'sizeBytes': bytes.length,
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
-      await _appendToDefaultPlaylist(videoId);
+      await _appendToPlaylist(playlistId, videoId);
     } catch (e) {
       throw NetworkException('Video upload failed', cause: e);
     }
   }
 
-  Future<void> _appendToDefaultPlaylist(String videoId) async {
-    final playlist = _firestore.collection(
-      FirestorePaths.devicePlaylist(FirestorePaths.defaultDeviceId),
-    );
-    final last = await playlist.orderBy('sortOrder', descending: true).limit(1).get();
+  Future<void> _appendToPlaylist(String playlistId, String videoId) async {
+    final entries = _firestore.collection('playlists').doc(playlistId).collection('entries');
+    final last = await entries.orderBy('sortOrder', descending: true).limit(1).get();
     final nextOrder = last.docs.isEmpty ? 0 : (last.docs.first.data()['sortOrder'] as int) + 1;
 
-    await playlist.add({
+    await entries.add({
       'videoId': videoId,
       'sortOrder': nextOrder,
       'addedAt': FieldValue.serverTimestamp(),
@@ -71,6 +75,7 @@ class UnavailableVideoUploadService implements VideoUploadService {
   Future<void> uploadVideo({
     required Uint8List bytes,
     required String fileName,
+    required String playlistId,
     void Function(double progress)? onProgress,
   }) async {
     throw const NetworkException('Firebase is unavailable, cannot upload right now.');

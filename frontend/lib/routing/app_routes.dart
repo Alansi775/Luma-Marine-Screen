@@ -6,4 +6,9 @@ class AppRoutes {
 
   static const nowPlaying = '/';
   static const diagnostics = '/diagnostics';
+  static const adminLogin = '/admin/login';
+  static const admin = '/admin';
+  static const adminPlaylistPattern = '/admin/playlists/:playlistId';
+
+  static String adminPlaylist(String playlistId) => '/admin/playlists/$playlistId';
 }

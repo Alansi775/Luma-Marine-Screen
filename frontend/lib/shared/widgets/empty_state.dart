@@ -10,16 +10,16 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 40, color: onSurface.withValues(alpha: 0.4)),
-          const SizedBox(height: 16),
+          Icon(icon, size: 32, color: theme.colorScheme.onSurface.withValues(alpha: 0.35)),
+          const SizedBox(height: 20),
           Text(
             message,
-            style: TextStyle(color: onSurface.withValues(alpha: 0.6)),
+            style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
         ],

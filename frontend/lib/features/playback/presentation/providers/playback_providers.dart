@@ -24,3 +24,21 @@ VideoRepository videoRepository(Ref ref) =>
 Stream<List<PlaylistEntry>> activePlaylist(Ref ref) {
   return ref.watch(playlistRepositoryProvider).watchActivePlaylist();
 }
+
+/// The active playlist, resolved down to local file paths ready to hand
+/// to the player — entries whose video hasn't finished downloading yet
+/// are skipped rather than shown as a gap or error, since the sync
+/// engine will re-emit once the download completes.
+@riverpod
+Stream<List<String>> resolvedPlaylistFilePaths(Ref ref) {
+  final playlistRepository = ref.watch(playlistRepositoryProvider);
+  final videoRepository = ref.watch(videoRepositoryProvider);
+  return playlistRepository.watchActivePlaylist().asyncMap((entries) async {
+    final paths = <String>[];
+    for (final entry in entries) {
+      final path = await videoRepository.getLocalFilePath(entry.videoId);
+      if (path != null) paths.add(path);
+    }
+    return paths;
+  });
+}

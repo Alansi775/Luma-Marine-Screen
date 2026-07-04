@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../routing/app_routes.dart';
-import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/brand_logo.dart';
 import '../providers/auth_providers.dart';
 
 /// Reached only via the hidden long-press gesture on the idle/splash
 /// screen (see shared/widgets/bootstrap_screen.dart) — there's no visible
-/// link to this from normal signage playback.
+/// link to this from normal signage playback. Full-bleed, no app bar:
+/// this should read as a deliberate brand moment, not a generic settings
+/// page.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -43,6 +45,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) context.go(AppRoutes.admin);
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
+    } catch (e) {
+      // Belt-and-suspenders: AuthException covers every case
+      // FirebaseAuthRepository is documented to throw, but a silent
+      // "nothing happened" on an unexpected error type is worse than an
+      // unpolished message.
+      setState(() => _errorMessage = 'Sign-in failed: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -50,53 +58,80 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      title: 'Admin Sign In',
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  onSubmitted: (_) => _submit(),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                  onSubmitted: (_) => _submit(),
-                ),
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Text(_errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                ],
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Sign In'),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => context.go(AppRoutes.nowPlaying),
-                  child: const Text('Back'),
-                ),
-              ],
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned(
+              top: 8,
+              left: 8,
+              child: IconButton(
+                onPressed: () => context.go(AppRoutes.nowPlaying),
+                icon: const Icon(Icons.arrow_back),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
-          ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: BrandLogo(size: 96)),
+                      const SizedBox(height: 40),
+                      Text(
+                        'ADMIN ACCESS',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.labelSmall,
+                      ),
+                      const SizedBox(height: 32),
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        autocorrect: false,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        onSubmitted: (_) => _submit(),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(labelText: 'Password'),
+                        onSubmitted: (_) => _submit(),
+                      ),
+                      if (_errorMessage != null) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
+                      ],
+                      const SizedBox(height: 28),
+                      FilledButton(
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.onPrimary,
+                                ),
+                              )
+                            : const Text('SIGN IN'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -8,13 +8,26 @@ part of 'sync_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// `keepAlive` matters here beyond the usual reason: constructing this
+/// provider is what starts the real sync engine's Firestore listener (see
+/// `FirestoreSyncService`) — it must be watched from somewhere at app
+/// startup (see `app.dart`), not just lazily from the diagnostics screen.
 
 @ProviderFor(syncService)
 final syncServiceProvider = SyncServiceProvider._();
 
+/// `keepAlive` matters here beyond the usual reason: constructing this
+/// provider is what starts the real sync engine's Firestore listener (see
+/// `FirestoreSyncService`) — it must be watched from somewhere at app
+/// startup (see `app.dart`), not just lazily from the diagnostics screen.
+
 final class SyncServiceProvider
     extends $FunctionalProvider<SyncService, SyncService, SyncService>
     with $Provider<SyncService> {
+  /// `keepAlive` matters here beyond the usual reason: constructing this
+  /// provider is what starts the real sync engine's Firestore listener (see
+  /// `FirestoreSyncService`) — it must be watched from somewhere at app
+  /// startup (see `app.dart`), not just lazily from the diagnostics screen.
   SyncServiceProvider._()
     : super(
         from: null,
@@ -48,4 +61,4 @@ final class SyncServiceProvider
   }
 }
 
-String _$syncServiceHash() => r'7716467a9f0b441263cda7e7065bce7deba697f9';
+String _$syncServiceHash() => r'6f0f6464383c4644c01f40726d87f493aaeeaa79';

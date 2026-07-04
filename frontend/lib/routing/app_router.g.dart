@@ -8,23 +8,32 @@ part of 'app_router.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Two flat routes today. Kept behind a provider specifically so future
-/// requirements (auth/device-registration redirect guards, deep links
-/// for remote diagnostics) are additive edits to this one file.
+/// Kept behind a provider specifically so future requirements (deep links
+/// for remote diagnostics, more admin routes) are additive edits to this
+/// one file. `/admin` (and everything nested under it) redirects to the
+/// hidden login screen for anyone not already signed in — there's no
+/// visible link to either from normal signage playback (see the
+/// long-press gesture on shared/widgets/bootstrap_screen.dart).
 
 @ProviderFor(goRouter)
 final goRouterProvider = GoRouterProvider._();
 
-/// Two flat routes today. Kept behind a provider specifically so future
-/// requirements (auth/device-registration redirect guards, deep links
-/// for remote diagnostics) are additive edits to this one file.
+/// Kept behind a provider specifically so future requirements (deep links
+/// for remote diagnostics, more admin routes) are additive edits to this
+/// one file. `/admin` (and everything nested under it) redirects to the
+/// hidden login screen for anyone not already signed in — there's no
+/// visible link to either from normal signage playback (see the
+/// long-press gesture on shared/widgets/bootstrap_screen.dart).
 
 final class GoRouterProvider
     extends $FunctionalProvider<GoRouter, GoRouter, GoRouter>
     with $Provider<GoRouter> {
-  /// Two flat routes today. Kept behind a provider specifically so future
-  /// requirements (auth/device-registration redirect guards, deep links
-  /// for remote diagnostics) are additive edits to this one file.
+  /// Kept behind a provider specifically so future requirements (deep links
+  /// for remote diagnostics, more admin routes) are additive edits to this
+  /// one file. `/admin` (and everything nested under it) redirects to the
+  /// hidden login screen for anyone not already signed in — there's no
+  /// visible link to either from normal signage playback (see the
+  /// long-press gesture on shared/widgets/bootstrap_screen.dart).
   GoRouterProvider._()
     : super(
         from: null,
@@ -58,4 +67,4 @@ final class GoRouterProvider
   }
 }
 
-String _$goRouterHash() => r'32cdbfdfd8d24b2029460fc95609d9c1cbe22b9b';
+String _$goRouterHash() => r'eb0db1045faacafab573793190bfcfd4648541b8';

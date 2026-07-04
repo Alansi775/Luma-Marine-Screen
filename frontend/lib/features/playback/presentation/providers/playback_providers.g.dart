@@ -149,3 +149,57 @@ final class ActivePlaylistProvider
 }
 
 String _$activePlaylistHash() => r'd8874cc3f9073a2545925bf90fa8794b46de73ef';
+
+/// The active playlist, resolved down to local file paths ready to hand
+/// to the player — entries whose video hasn't finished downloading yet
+/// are skipped rather than shown as a gap or error, since the sync
+/// engine will re-emit once the download completes.
+
+@ProviderFor(resolvedPlaylistFilePaths)
+final resolvedPlaylistFilePathsProvider = ResolvedPlaylistFilePathsProvider._();
+
+/// The active playlist, resolved down to local file paths ready to hand
+/// to the player — entries whose video hasn't finished downloading yet
+/// are skipped rather than shown as a gap or error, since the sync
+/// engine will re-emit once the download completes.
+
+final class ResolvedPlaylistFilePathsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<String>>,
+          List<String>,
+          Stream<List<String>>
+        >
+    with $FutureModifier<List<String>>, $StreamProvider<List<String>> {
+  /// The active playlist, resolved down to local file paths ready to hand
+  /// to the player — entries whose video hasn't finished downloading yet
+  /// are skipped rather than shown as a gap or error, since the sync
+  /// engine will re-emit once the download completes.
+  ResolvedPlaylistFilePathsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'resolvedPlaylistFilePathsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$resolvedPlaylistFilePathsHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<List<String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<List<String>> create(Ref ref) {
+    return resolvedPlaylistFilePaths(ref);
+  }
+}
+
+String _$resolvedPlaylistFilePathsHash() =>
+    r'7f3dd843688b925e836f6f60472d7e0c79fbc4be';

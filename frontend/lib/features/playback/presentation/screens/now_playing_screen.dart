@@ -1,49 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 
+import '../../../../routing/app_routes.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/bootstrap_screen.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../providers/playback_providers.dart';
+import '../providers/playlist_player_controller.dart';
 
-/// Placeholder for the eventual video player. This pass proves the
-/// wiring (local playlist -> screen) end to end; the actual player
-/// (video_player/media_kit, transition handling, looping) is future work.
+/// The signage player. Loops through the local playlist forever; falls
+/// back to [BootstrapScreen] whenever there's nothing downloaded yet to
+/// play (first boot, empty playlist, or between syncs).
+///
+/// Long-pressing anywhere on this screen — whatever it's currently
+/// showing — opens the hidden admin sign-in. There's no visible button;
+/// this is a public display.
 class NowPlayingScreen extends ConsumerWidget {
   const NowPlayingScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playlist = ref.watch(activePlaylistProvider);
+    final resolvedPaths = ref.watch(resolvedPlaylistFilePathsProvider);
 
     return AppScaffold(
-      body: playlist.when(
-        loading: () => const BootstrapScreen(),
-        error: (error, stackTrace) => EmptyState(
-          icon: Icons.error_outline,
-          message: 'Unable to load the playlist.\n$error',
+      body: GestureDetector(
+        onLongPress: () => context.push(AppRoutes.adminLogin),
+        behavior: HitTestBehavior.opaque,
+        child: resolvedPaths.when(
+          loading: () => const BootstrapScreen(),
+          error: (error, stackTrace) => EmptyState(
+            icon: Icons.error_outline,
+            message: 'Unable to load the playlist.\n$error',
+          ),
+          data: (paths) => paths.isEmpty
+              ? const EmptyState(
+                  icon: Icons.playlist_play,
+                  message: 'No videos synced yet.\nWaiting for the playlist to sync.',
+                )
+              : const _VideoPlayerView(),
         ),
-        data: (entries) => entries.isEmpty
-            ? const EmptyState(
-                icon: Icons.playlist_play,
-                message: 'No videos synced yet.\nWaiting for the playlist to sync.',
-              )
-            : _PlaylistPlaceholder(entryCount: entries.length),
       ),
     );
   }
 }
 
-class _PlaylistPlaceholder extends StatelessWidget {
-  const _PlaylistPlaceholder({required this.entryCount});
-
-  final int entryCount;
+/// Split out so the native video player (and the platform media library it
+/// requires) is only ever constructed once there's actually something to
+/// play — not on every app boot, and not when the playlist happens to be
+/// empty (e.g. in tests, which don't bundle the native media library).
+class _VideoPlayerView extends ConsumerWidget {
+  const _VideoPlayerView();
 
   @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      icon: Icons.movie_outlined,
-      message: '$entryCount video(s) in the playlist.\nPlayback is not implemented yet.',
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controller = ref.watch(playlistPlayerControllerProvider);
+    return Video(controller: controller, controls: NoVideoControls);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'core/database/app_database_opener.dart';
@@ -17,6 +18,7 @@ import 'core/platform/default_app_directories.dart';
 /// play back whatever's already cached on disk.
 Future<List<Override>> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   final logger = PlatformLogger.consoleOnly();
   logger.info('Luma Marine starting');
