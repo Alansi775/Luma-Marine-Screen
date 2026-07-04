@@ -11,9 +11,13 @@ part 'sync_providers.g.dart';
 /// `FirestoreSyncService`) — it must be watched from somewhere at app
 /// startup (see `app.dart`), not just lazily from the diagnostics screen.
 @Riverpod(keepAlive: true)
-SyncService syncService(Ref ref) => createSyncService(
-      logger: ref.watch(appLoggerProvider),
-      firebaseAvailable: ref.watch(firebaseAvailableProvider),
-      database: ref.watch(appDatabaseProvider),
-      directories: ref.watch(appDirectoriesProvider),
-    );
+SyncService syncService(Ref ref) {
+  final service = createSyncService(
+    logger: ref.watch(appLoggerProvider),
+    firebaseAvailable: ref.watch(firebaseAvailableProvider),
+    database: ref.watch(appDatabaseProvider),
+    directories: ref.watch(appDirectoriesProvider),
+  );
+  ref.onDispose(service.dispose);
+  return service;
+}

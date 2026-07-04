@@ -131,4 +131,7 @@ class WebSyncService implements SyncService {
 
   @override
   Future<void> checkForUpdates() async {}
+
+  @override
+  void dispose() {}
 }

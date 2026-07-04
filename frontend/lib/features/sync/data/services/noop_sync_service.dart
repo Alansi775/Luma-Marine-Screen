@@ -23,4 +23,7 @@ class NoopSyncService implements SyncService {
   Future<void> checkForUpdates() async {
     _logger.debug('checkForUpdates() called on NoopSyncService — no-op.');
   }
+
+  @override
+  void dispose() {}
 }

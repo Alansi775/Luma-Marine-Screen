@@ -186,4 +186,7 @@ class FirestoreSyncService implements SyncService {
     // The realtime Firestore listener already covers this; kept to
     // satisfy the interface for a future manual "sync now" action.
   }
+
+  @override
+  void dispose() {}
 }
