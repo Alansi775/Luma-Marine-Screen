@@ -46,6 +46,7 @@ class FirestoreSyncService implements SyncService {
   final _statusController = StreamController<SyncStatus>.broadcast();
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _entriesSubscription;
   String? _activePlaylistId;
+  bool _isSyncing = false;
 
   @override
   bool get isAvailable => true;
@@ -93,6 +94,12 @@ class FirestoreSyncService implements SyncService {
   }
 
   Future<void> _onPlaylistSnapshot(QuerySnapshot<Map<String, dynamic>> snapshot) async {
+    // See rest_firestore_sync_service.dart's identical guard: a single
+    // pass (downloading a large video) can take far longer than it
+    // takes for another snapshot to arrive (e.g. on reconnect), so this
+    // stops two passes from downloading the same file concurrently.
+    if (_isSyncing) return;
+    _isSyncing = true;
     _statusController.add(SyncStatus.syncing);
     try {
       final entries = <PlaylistEntriesCompanion>[];
@@ -113,6 +120,8 @@ class FirestoreSyncService implements SyncService {
     } catch (e, st) {
       _logger.error('Sync pass failed', error: e, stackTrace: st);
       _statusController.add(SyncStatus.error);
+    } finally {
+      _isSyncing = false;
     }
   }
 

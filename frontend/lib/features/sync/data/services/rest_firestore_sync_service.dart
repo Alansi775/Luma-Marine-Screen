@@ -49,6 +49,7 @@ class RestFirestoreSyncService implements SyncService {
   final _dio = Dio();
   final _statusController = StreamController<SyncStatus>.broadcast();
   Timer? _pollTimer;
+  bool _isSyncing = false;
 
   String get _projectId => DefaultFirebaseOptions.currentPlatform.projectId;
   String get _apiKey => DefaultFirebaseOptions.currentPlatform.apiKey;
@@ -73,6 +74,13 @@ class RestFirestoreSyncService implements SyncService {
   }
 
   Future<void> _poll() async {
+    // A single poll (specifically, downloading a large video) can easily
+    // take far longer than the poll interval. Without this guard, the
+    // timer would start a new, competing download on top of one still
+    // in progress every tick, and neither would ever finish — exactly
+    // what was happening before this fix.
+    if (_isSyncing) return;
+    _isSyncing = true;
     _statusController.add(SyncStatus.checking);
     try {
       final activePlaylistId = await _fetchActivePlaylistId();
@@ -108,6 +116,8 @@ class RestFirestoreSyncService implements SyncService {
       // whatever's already cached keeps playing uninterrupted.
       _logger.warning('Poll failed, will retry', error: e, stackTrace: st);
       _statusController.add(SyncStatus.error);
+    } finally {
+      _isSyncing = false;
     }
   }
 
