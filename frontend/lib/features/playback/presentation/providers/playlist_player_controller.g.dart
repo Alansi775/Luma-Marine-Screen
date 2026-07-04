@@ -72,7 +72,7 @@ final class PlaylistPlayerControllerProvider
 }
 
 String _$playlistPlayerControllerHash() =>
-    r'b6bdf455a71b96c07426d32f1634ebd05d1468ec';
+    r'5e27cb750cf1fe37528049c65cbbacc1697b2e8d';
 
 /// Owns the single [Player] instance and keeps it pointed at the active
 /// playlist, looping forever (video 1 → 2 → … → N → 1 → …).

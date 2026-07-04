@@ -26,7 +26,7 @@ import '../../domain/services/sync_service.dart';
 /// on disk — "never redownload unchanged files"), then replaces the
 /// local playlist table. Local video files no longer referenced are
 /// pruned to bound disk usage.
-class FirestoreSyncService implements SyncService {
+class FirestoreSyncService extends SyncService {
   FirestoreSyncService({
     required AppDatabase database,
     required AppDirectories directories,
@@ -195,7 +195,4 @@ class FirestoreSyncService implements SyncService {
     // The realtime Firestore listener already covers this; kept to
     // satisfy the interface for a future manual "sync now" action.
   }
-
-  @override
-  void dispose() {}
 }

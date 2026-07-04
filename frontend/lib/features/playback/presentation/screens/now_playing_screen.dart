@@ -7,6 +7,7 @@ import '../../../../routing/app_routes.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/bootstrap_screen.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/sync_activity_badge.dart';
 import '../providers/playback_providers.dart';
 import '../providers/playlist_player_controller.dart';
 
@@ -28,18 +29,31 @@ class NowPlayingScreen extends ConsumerWidget {
       body: GestureDetector(
         onLongPress: () => context.push(AppRoutes.adminLogin),
         behavior: HitTestBehavior.opaque,
-        child: resolvedPaths.when(
-          loading: () => const BootstrapScreen(),
-          error: (error, stackTrace) => EmptyState(
-            icon: Icons.error_outline,
-            message: 'Unable to load the playlist.\n$error',
-          ),
-          data: (paths) => paths.isEmpty
-              ? const EmptyState(
-                  icon: Icons.playlist_play,
-                  message: 'No videos synced yet.\nWaiting for the playlist to sync.',
-                )
-              : const _VideoPlayerView(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: resolvedPaths.when(
+                loading: () => const BootstrapScreen(),
+                error: (error, stackTrace) => EmptyState(
+                  icon: Icons.error_outline,
+                  message: 'Unable to load the playlist.\n$error',
+                ),
+                data: (paths) => paths.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.playlist_play,
+                        message: 'No videos synced yet.\nWaiting for the playlist to sync.',
+                      )
+                    : const _VideoPlayerView(),
+              ),
+            ),
+            // Small, non-blocking — never covers the video underneath.
+            const Positioned(
+              top: 24,
+              left: 0,
+              right: 0,
+              child: Center(child: SyncActivityBadge()),
+            ),
+          ],
         ),
       ),
     );

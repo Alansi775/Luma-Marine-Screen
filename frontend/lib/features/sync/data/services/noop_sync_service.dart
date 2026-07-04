@@ -6,7 +6,7 @@ import '../../domain/services/sync_service.dart';
 /// today; swapping in the real Firestore-backed engine later means
 /// changing one provider (see routing/diagnostics wiring), not any
 /// caller.
-class NoopSyncService implements SyncService {
+class NoopSyncService extends SyncService {
   NoopSyncService(this._logger, {required this.isAvailable}) {
     _logger.info('Sync engine not yet implemented; running local-only.');
   }
@@ -23,7 +23,4 @@ class NoopSyncService implements SyncService {
   Future<void> checkForUpdates() async {
     _logger.debug('checkForUpdates() called on NoopSyncService — no-op.');
   }
-
-  @override
-  void dispose() {}
 }

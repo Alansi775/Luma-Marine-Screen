@@ -2,19 +2,23 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../../core/constants/firestore_paths.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/realtime/device_change_signal.dart';
 import '../../domain/entities/admin_playlist.dart';
 import '../../domain/entities/playlist_video_item.dart';
 import '../../domain/repositories/playlist_management_repository.dart';
 
 class FirebasePlaylistManagementRepository implements PlaylistManagementRepository {
-  FirebasePlaylistManagementRepository(this._firestore);
+  FirebasePlaylistManagementRepository(this._firestore, this._changeSignal);
 
   final FirebaseFirestore _firestore;
+  final DeviceChangeSignal _changeSignal;
 
   CollectionReference<Map<String, dynamic>> get _playlists => _firestore.collection('playlists');
 
   DocumentReference<Map<String, dynamic>> get _defaultDevice =>
       _firestore.collection('devices').doc(FirestorePaths.defaultDeviceId);
+
+  Future<void> _notifyDevice() => _changeSignal.notifyChanged(FirestorePaths.defaultDeviceId);
 
   @override
   Stream<List<AdminPlaylist>> watchPlaylists() {
@@ -77,6 +81,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       if (device.data()?['activePlaylistId'] == playlistId) {
         await _defaultDevice.set({'activePlaylistId': null}, SetOptions(merge: true));
       }
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to delete playlist', cause: e);
     }
@@ -112,6 +117,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
   Future<void> removeVideoFromPlaylist({required String playlistId, required String entryId}) async {
     try {
       await _playlists.doc(playlistId).collection('entries').doc(entryId).delete();
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to remove video from playlist', cause: e);
     }
@@ -137,6 +143,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
         'addedAt': FieldValue.serverTimestamp(),
       });
       await batch.commit();
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to move video', cause: e);
     }
@@ -151,6 +158,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
         batch.update(entries.doc(orderedEntryIds[i]), {'sortOrder': i});
       }
       await batch.commit();
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to reorder playlist', cause: e);
     }
@@ -160,6 +168,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
   Future<void> renameVideo(String videoId, String name) async {
     try {
       await _firestore.collection(FirestorePaths.videos).doc(videoId).update({'name': name});
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to rename video', cause: e);
     }
@@ -174,6 +183,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
   Future<void> setActivePlaylist(String? playlistId) async {
     try {
       await _defaultDevice.set({'activePlaylistId': playlistId}, SetOptions(merge: true));
+      await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to set active playlist', cause: e);
     }

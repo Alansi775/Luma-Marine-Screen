@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "deviceSignals": {
+      "$deviceId": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    },
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

@@ -23,7 +23,7 @@ import '../../domain/services/sync_service.dart';
 /// without needing a Linux/macOS build — useful since this app's actual
 /// video-caching guarantees (offline playback, never re-downloading
 /// unchanged files) are meaningless in a browser tab anyway.
-class WebSyncService implements SyncService {
+class WebSyncService extends SyncService {
   WebSyncService({required AppDatabase database, required AppLogger logger})
       : _dataSource = PlaylistLocalDataSource(database),
         _db = database,
@@ -131,7 +131,4 @@ class WebSyncService implements SyncService {
 
   @override
   Future<void> checkForUpdates() async {}
-
-  @override
-  void dispose() {}
 }

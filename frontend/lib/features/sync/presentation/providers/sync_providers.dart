@@ -21,3 +21,8 @@ SyncService syncService(Ref ref) {
   ref.onDispose(service.dispose);
   return service;
 }
+
+/// What the sync engine is doing right now, for the signage screen's
+/// small non-blocking indicator — see shared/widgets/sync_activity_badge.dart.
+@riverpod
+Stream<SyncActivity?> syncActivity(Ref ref) => ref.watch(syncServiceProvider).activityStream;

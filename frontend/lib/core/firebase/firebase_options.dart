@@ -37,6 +37,11 @@ class DefaultFirebaseOptions {
     }
   }
 
+  /// Realtime Database — used only as a lightweight change-notification
+  /// signal (see backend/README.md's "Realtime Database: why it exists"),
+  /// not for real data storage.
+  static const databaseUrl = 'https://advertisingscreen-default-rtdb.firebaseio.com';
+
   static const web = FirebaseOptions(
     apiKey: 'AIzaSyCRuUWvwXpPhfOVgs7LCu9awuKEbzZZllE',
     appId: '1:1029613523965:web:ba748f389fb6a700cdff94',
@@ -45,6 +50,7 @@ class DefaultFirebaseOptions {
     authDomain: 'advertisingscreen.firebaseapp.com',
     storageBucket: 'advertisingscreen.firebasestorage.app',
     measurementId: 'G-38464BHGQY',
+    databaseURL: databaseUrl,
   );
 
   static const macos = FirebaseOptions(
@@ -54,6 +60,7 @@ class DefaultFirebaseOptions {
     projectId: 'advertisingscreen',
     storageBucket: 'advertisingscreen.firebasestorage.app',
     iosBundleId: 'com.lumamarine.signage',
+    databaseURL: databaseUrl,
   );
 
   static const linux = FirebaseOptions(
@@ -62,5 +69,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1029613523965',
     projectId: 'advertisingscreen',
     storageBucket: 'advertisingscreen.firebasestorage.app',
+    databaseURL: databaseUrl,
   );
 }

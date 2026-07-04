@@ -9,6 +9,54 @@ part of 'admin_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(deviceChangeSignal)
+final deviceChangeSignalProvider = DeviceChangeSignalProvider._();
+
+final class DeviceChangeSignalProvider
+    extends
+        $FunctionalProvider<
+          DeviceChangeSignal,
+          DeviceChangeSignal,
+          DeviceChangeSignal
+        >
+    with $Provider<DeviceChangeSignal> {
+  DeviceChangeSignalProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'deviceChangeSignalProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$deviceChangeSignalHash();
+
+  @$internal
+  @override
+  $ProviderElement<DeviceChangeSignal> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  DeviceChangeSignal create(Ref ref) {
+    return deviceChangeSignal(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DeviceChangeSignal value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DeviceChangeSignal>(value),
+    );
+  }
+}
+
+String _$deviceChangeSignalHash() =>
+    r'a08742d9f09ae3235ce9149a8af24622bbb2b4e0';
+
 @ProviderFor(videoUploadService)
 final videoUploadServiceProvider = VideoUploadServiceProvider._();
 
@@ -55,7 +103,7 @@ final class VideoUploadServiceProvider
 }
 
 String _$videoUploadServiceHash() =>
-    r'93d1370e4d7af3ad5f8a9eeddcaf000d1009e2a0';
+    r'38ec7eeacc7c3f525eef14e9ab928f6fd2bf00d8';
 
 @ProviderFor(playlistManagementRepository)
 final playlistManagementRepositoryProvider =
@@ -104,7 +152,7 @@ final class PlaylistManagementRepositoryProvider
 }
 
 String _$playlistManagementRepositoryHash() =>
-    r'8600bce76e301cc04340805bf280693150b095f2';
+    r'0f54af6de2f62590525f205863e5ca1262e80b62';
 
 @ProviderFor(adminPlaylists)
 final adminPlaylistsProvider = AdminPlaylistsProvider._();

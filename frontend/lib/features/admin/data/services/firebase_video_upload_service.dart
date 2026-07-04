@@ -7,13 +7,15 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/firestore_paths.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/realtime/device_change_signal.dart';
 import '../../domain/services/video_upload_service.dart';
 
 class FirebaseVideoUploadService implements VideoUploadService {
-  FirebaseVideoUploadService(this._firestore, this._storage);
+  FirebaseVideoUploadService(this._firestore, this._storage, this._changeSignal);
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final DeviceChangeSignal _changeSignal;
 
   @override
   Future<void> uploadVideo({
@@ -66,6 +68,7 @@ class FirebaseVideoUploadService implements VideoUploadService {
       'sortOrder': nextOrder,
       'addedAt': FieldValue.serverTimestamp(),
     });
+    await _changeSignal.notifyChanged(FirestorePaths.defaultDeviceId);
   }
 }
 
