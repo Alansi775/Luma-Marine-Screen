@@ -68,6 +68,15 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
     final path = _queue[index];
     _currentPath = path;
 
+    // Dispose the outgoing controller *before* creating the next one:
+    // flutter-pi's GStreamer/VAAPI decode session is a limited shared
+    // resource, so briefly having two controllers alive at once makes the
+    // new one hang on its first frame waiting for hardware the old one is
+    // still holding.
+    final previous = state;
+    state = null;
+    await previous?.dispose();
+
     final isNetworkUrl = path.startsWith('http://') || path.startsWith('https://');
     final controller = isNetworkUrl
         ? VideoPlayerController.networkUrl(Uri.parse(path))
@@ -77,10 +86,8 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
       if (controller.value.isCompleted) _playNext();
     });
 
-    final previous = state;
     await controller.initialize();
     await controller.play();
     state = controller;
-    await previous?.dispose();
   }
 }
