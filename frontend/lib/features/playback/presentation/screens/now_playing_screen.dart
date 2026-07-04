@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:media_kit_video/media_kit_video.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../../routing/app_routes.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
@@ -60,16 +60,26 @@ class NowPlayingScreen extends ConsumerWidget {
   }
 }
 
-/// Split out so the native video player (and the platform media library it
-/// requires) is only ever constructed once there's actually something to
-/// play — not on every app boot, and not when the playlist happens to be
-/// empty (e.g. in tests, which don't bundle the native media library).
+/// Split out so the native video player is only ever constructed once
+/// there's actually something to play — not on every app boot, and not
+/// when the playlist happens to be empty (e.g. in tests).
 class _VideoPlayerView extends ConsumerWidget {
   const _VideoPlayerView();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(playlistPlayerControllerProvider);
-    return Video(controller: controller, controls: NoVideoControls);
+    if (controller == null || !controller.value.isInitialized) {
+      return const BootstrapScreen();
+    }
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: VideoPlayer(controller),
+        ),
+      ),
+    );
   }
 }

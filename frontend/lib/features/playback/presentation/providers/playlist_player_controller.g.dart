@@ -8,42 +8,76 @@ part of 'playlist_player_controller.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Owns the single [Player] instance and keeps it pointed at the active
-/// playlist, looping forever (video 1 → 2 → … → N → 1 → …).
+/// Owns the current video's [VideoPlayerController] and keeps it pointed
+/// at the active playlist, looping forever (video 1 → 2 → … → N → 1 → …).
 ///
-/// Deliberately does *not* restart playback just because the resolved
+/// Uses the official `video_player` package rather than a general-purpose
+/// media library: flutter-pi (the production target) has its own
+/// first-party GStreamer-backed implementation of `video_player`'s
+/// platform interface built in — no plugin registration needed, just the
+/// right GStreamer packages installed on the device (see
+/// frontend/README.md). `video_player` also has official macOS and web
+/// implementations, so the same code path covers every platform this app
+/// touches.
+///
+/// `video_player` needs a fresh [VideoPlayerController] per video (unlike
+/// a single long-lived player object), so the controller instance itself
+/// is this provider's state — the UI rebuilds when it changes.
+///
+/// Deliberately does *not* switch videos just because the resolved
 /// file-path list changed shape — "future playlist changes must not
 /// interrupt playback unnecessarily": if the currently-playing file is
 /// still present anywhere in the new list, playback continues
 /// uninterrupted and only the *next* advance uses the updated order.
-/// Playback only jumps immediately if the current file was removed, or
-/// nothing has played yet.
 
 @ProviderFor(PlaylistPlayerController)
 final playlistPlayerControllerProvider = PlaylistPlayerControllerProvider._();
 
-/// Owns the single [Player] instance and keeps it pointed at the active
-/// playlist, looping forever (video 1 → 2 → … → N → 1 → …).
+/// Owns the current video's [VideoPlayerController] and keeps it pointed
+/// at the active playlist, looping forever (video 1 → 2 → … → N → 1 → …).
 ///
-/// Deliberately does *not* restart playback just because the resolved
+/// Uses the official `video_player` package rather than a general-purpose
+/// media library: flutter-pi (the production target) has its own
+/// first-party GStreamer-backed implementation of `video_player`'s
+/// platform interface built in — no plugin registration needed, just the
+/// right GStreamer packages installed on the device (see
+/// frontend/README.md). `video_player` also has official macOS and web
+/// implementations, so the same code path covers every platform this app
+/// touches.
+///
+/// `video_player` needs a fresh [VideoPlayerController] per video (unlike
+/// a single long-lived player object), so the controller instance itself
+/// is this provider's state — the UI rebuilds when it changes.
+///
+/// Deliberately does *not* switch videos just because the resolved
 /// file-path list changed shape — "future playlist changes must not
 /// interrupt playback unnecessarily": if the currently-playing file is
 /// still present anywhere in the new list, playback continues
 /// uninterrupted and only the *next* advance uses the updated order.
-/// Playback only jumps immediately if the current file was removed, or
-/// nothing has played yet.
 final class PlaylistPlayerControllerProvider
-    extends $NotifierProvider<PlaylistPlayerController, VideoController> {
-  /// Owns the single [Player] instance and keeps it pointed at the active
-  /// playlist, looping forever (video 1 → 2 → … → N → 1 → …).
+    extends
+        $NotifierProvider<PlaylistPlayerController, VideoPlayerController?> {
+  /// Owns the current video's [VideoPlayerController] and keeps it pointed
+  /// at the active playlist, looping forever (video 1 → 2 → … → N → 1 → …).
   ///
-  /// Deliberately does *not* restart playback just because the resolved
+  /// Uses the official `video_player` package rather than a general-purpose
+  /// media library: flutter-pi (the production target) has its own
+  /// first-party GStreamer-backed implementation of `video_player`'s
+  /// platform interface built in — no plugin registration needed, just the
+  /// right GStreamer packages installed on the device (see
+  /// frontend/README.md). `video_player` also has official macOS and web
+  /// implementations, so the same code path covers every platform this app
+  /// touches.
+  ///
+  /// `video_player` needs a fresh [VideoPlayerController] per video (unlike
+  /// a single long-lived player object), so the controller instance itself
+  /// is this provider's state — the UI rebuilds when it changes.
+  ///
+  /// Deliberately does *not* switch videos just because the resolved
   /// file-path list changed shape — "future playlist changes must not
   /// interrupt playback unnecessarily": if the currently-playing file is
   /// still present anywhere in the new list, playback continues
   /// uninterrupted and only the *next* advance uses the updated order.
-  /// Playback only jumps immediately if the current file was removed, or
-  /// nothing has played yet.
   PlaylistPlayerControllerProvider._()
     : super(
         from: null,
@@ -63,39 +97,52 @@ final class PlaylistPlayerControllerProvider
   PlaylistPlayerController create() => PlaylistPlayerController();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(VideoController value) {
+  Override overrideWithValue(VideoPlayerController? value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<VideoController>(value),
+      providerOverride: $SyncValueProvider<VideoPlayerController?>(value),
     );
   }
 }
 
 String _$playlistPlayerControllerHash() =>
-    r'5e27cb750cf1fe37528049c65cbbacc1697b2e8d';
+    r'd840b7c560eb3b59e921acec0b52ef3d969bf701';
 
-/// Owns the single [Player] instance and keeps it pointed at the active
-/// playlist, looping forever (video 1 → 2 → … → N → 1 → …).
+/// Owns the current video's [VideoPlayerController] and keeps it pointed
+/// at the active playlist, looping forever (video 1 → 2 → … → N → 1 → …).
 ///
-/// Deliberately does *not* restart playback just because the resolved
+/// Uses the official `video_player` package rather than a general-purpose
+/// media library: flutter-pi (the production target) has its own
+/// first-party GStreamer-backed implementation of `video_player`'s
+/// platform interface built in — no plugin registration needed, just the
+/// right GStreamer packages installed on the device (see
+/// frontend/README.md). `video_player` also has official macOS and web
+/// implementations, so the same code path covers every platform this app
+/// touches.
+///
+/// `video_player` needs a fresh [VideoPlayerController] per video (unlike
+/// a single long-lived player object), so the controller instance itself
+/// is this provider's state — the UI rebuilds when it changes.
+///
+/// Deliberately does *not* switch videos just because the resolved
 /// file-path list changed shape — "future playlist changes must not
 /// interrupt playback unnecessarily": if the currently-playing file is
 /// still present anywhere in the new list, playback continues
 /// uninterrupted and only the *next* advance uses the updated order.
-/// Playback only jumps immediately if the current file was removed, or
-/// nothing has played yet.
 
-abstract class _$PlaylistPlayerController extends $Notifier<VideoController> {
-  VideoController build();
+abstract class _$PlaylistPlayerController
+    extends $Notifier<VideoPlayerController?> {
+  VideoPlayerController? build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<VideoController, VideoController>;
+    final ref =
+        this.ref as $Ref<VideoPlayerController?, VideoPlayerController?>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<VideoController, VideoController>,
-              VideoController,
+              AnyNotifier<VideoPlayerController?, VideoPlayerController?>,
+              VideoPlayerController?,
               Object?,
               Object?
             >;

@@ -27,15 +27,17 @@ Feature-first Clean Architecture. See `lib/`:
   `/admin/login`, `/admin` (auth-guarded).
 - `shared/` — generic reusable widgets not tied to a single feature.
 - `features/<name>/{domain,data,presentation}`:
-  - `playback` — the video player itself (`media_kit`), reading from the
+  - `playback` — the video player itself (`video_player`), reading from the
     local drift-backed playlist/video cache. Never touches the network.
-  - `sync` — the real sync engine (`FirestoreSyncService`, native only):
-    listens to the default screen's Firestore playlist, downloads new/changed
-    videos, prunes ones no longer referenced. Web always uses the no-op
-    stub — there's no local video cache to speak of in a browser tab.
+  - `sync` — three implementations selected automatically per platform:
+    `FirestoreSyncService` (native Firebase SDK, realtime — macOS),
+    `RestFirestoreSyncService` (Linux — no native SDK, so plain HTTPS +
+    a Realtime Database push signal instead of polling; see backend/README.md),
+    `WebSyncService` (streams from Storage URLs directly, no local caching).
   - `auth` — Firebase Authentication (email/password) gating the admin flow.
-  - `admin` — the hidden upload screen: pick a video file, upload to Storage,
-    write its Firestore catalog entry and playlist entry.
+  - `admin` — playlist management: create/rename/delete playlists, upload
+    videos into a specific playlist, reorder/move/rename videos, pick which
+    playlist is live.
   - `diagnostics` — read-only status screen (device id, Firebase/sync/storage
     state).
 
@@ -70,17 +72,35 @@ internet.
 
 ## Video playback
 
-Uses [`media_kit`](https://pub.dev/packages/media_kit) rather than the
-official `video_player` plugin, which has no Linux implementation at all —
-`media_kit` (backed by libmpv) is the standard choice for Flutter kiosk/signage
-apps on flutter-pi. **Deployment note:** the target Ubuntu Server device needs
-`libmpv` installed (`media_kit_libs_linux` bundles it for a normal `flutter
-build linux`, but verify it's present/loadable in the flutter-pi runtime
-environment before relying on it).
+Uses the **official `video_player` package** — not a general-purpose media
+library like `media_kit`. flutter-pi (the production target) has its own
+first-party GStreamer-backed implementation of `video_player`'s platform
+interface built into the engine itself; there's no plugin to register, no
+extra Dart-side setup. `video_player` also has official macOS
+(`video_player_avfoundation`) and web (`video_player_web`) implementations,
+so the same widget code runs on every platform this app targets.
 
-The player is only constructed once there's an actual video to play — not on
-every app boot — so an empty playlist (fresh install, or in tests) never
-touches the native media library at all.
+**Deployment requirement:** the target device needs GStreamer installed
+before video will play under flutter-pi:
+
+```
+sudo apt install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+  libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base \
+  gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly \
+  gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-alsa
+```
+
+(Do not use `media_kit`/`media_kit_video` here — they implement the
+*standard* Flutter plugin registration mechanism, which flutter-pi does not
+support for third-party plugins. Confirmed in production: it throws
+`MissingPluginException` on `VideoOutputManager.Create` at runtime.)
+
+Each video gets its own `VideoPlayerController` (this package's design, not
+ours) — the controller instance is the player provider's state, and the UI
+rebuilds when it changes between videos. The controller is only constructed
+once there's an actual video to play — not on every app boot — so an empty
+playlist (fresh install, or in tests) never touches the platform video
+implementation at all.
 
 ## Branding
 
@@ -109,9 +129,10 @@ flow quickly (no native compile step). What's different there:
   `drift_worker.dart.js` in `web/` — download matching versions from
   `simolus3/sqlite3.dart` and `simolus3/drift` GitHub releases if you upgrade
   those packages).
-- The real sync engine doesn't run on web (`NoopSyncService` always) — there's
-  no local video cache in a browser tab, so uploaded videos won't appear/play
-  in the web preview. Use macOS to see the full upload → sync → playback loop.
+- `WebSyncService` streams videos directly from their Storage URL instead of
+  caching locally (no local disk to speak of in a browser tab) — so the full
+  upload → sync → playback loop *does* work in the web preview, just without
+  offline caching.
 - Device identity is a fresh UUID per session, not persisted.
 
 ## Testing
