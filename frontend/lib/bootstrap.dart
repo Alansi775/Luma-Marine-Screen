@@ -6,6 +6,7 @@ import 'core/di/core_providers.dart';
 import 'core/firebase/firebase_bootstrapper.dart';
 import 'core/logging/platform_logger.dart';
 import 'core/platform/default_app_directories.dart';
+import 'core/platform/video_player_registration.dart';
 
 /// Ordered async setup, run once before `runApp`. Order matters: the
 /// logger's file sink and the database file both need directories
@@ -17,6 +18,7 @@ import 'core/platform/default_app_directories.dart';
 /// play back whatever's already cached on disk.
 Future<List<Override>> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  registerVideoPlayerPlatform();
 
   final logger = PlatformLogger.consoleOnly();
   logger.info('Luma Marine starting');
