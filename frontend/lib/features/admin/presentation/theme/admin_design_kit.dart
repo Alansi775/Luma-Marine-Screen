@@ -77,6 +77,80 @@ class AdminColors {
   /// side's wall-clock schedule.
   static AdminColors of(BuildContext context) =>
       MediaQuery.platformBrightnessOf(context) == Brightness.dark ? dark : light;
+
+  /// A full [ThemeData] built from this palette. The signage side's
+  /// `MaterialApp.router` theme switches between `AppTheme.light`/`.dark`
+  /// on a *wall-clock* schedule (see `ThemeSchedule`) — completely
+  /// independent of [AdminColors], which follows the system's
+  /// light/dark preference instead. Without this wrapper, every admin
+  /// screen mixes two unrelated theme sources: this palette for whatever
+  /// I explicitly styled, and whichever signage theme happens to be
+  /// active for anything left to Material's defaults (dialog surfaces,
+  /// splash/hover colors, text selection) — which is exactly why dialogs
+  /// were flashing bright white at certain times of day. Every admin
+  /// `Scaffold` wraps its subtree in `Theme(data: AdminColors.of(context)
+  /// .themeData, ...)` to make this palette authoritative for the whole
+  /// subtree, not just the widgets that read it directly.
+  ThemeData get themeData {
+    final base = isDark ? ThemeData.dark(useMaterial3: true) : ThemeData.light(useMaterial3: true);
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: hairlineBright, width: 0.8),
+    );
+    return base.copyWith(
+      scaffoldBackgroundColor: background,
+      canvasColor: surface,
+      cardColor: surface,
+      dialogTheme: const DialogThemeData(backgroundColor: Colors.transparent, surfaceTintColor: Colors.transparent),
+      colorScheme: base.colorScheme.copyWith(
+        surface: surface,
+        onSurface: textPrimary,
+        primary: accent,
+        onPrimary: isDark ? Colors.black : Colors.white,
+        error: danger,
+      ),
+      textTheme: base.textTheme.apply(bodyColor: textPrimary, displayColor: textPrimary),
+      iconTheme: IconThemeData(color: textPrimary),
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: hairline,
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: accent,
+        selectionColor: accent.withValues(alpha: 0.3),
+        selectionHandleColor: accent,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceRaised,
+        border: inputBorder,
+        enabledBorder: inputBorder,
+        focusedBorder: inputBorder.copyWith(borderSide: BorderSide(color: accent, width: 1.2)),
+        labelStyle: TextStyle(color: textDim),
+        floatingLabelStyle: TextStyle(color: accent),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: surfaceRaised,
+        contentTextStyle: TextStyle(color: textPrimary),
+      ),
+    );
+  }
+}
+
+/// Wraps a subtree so this palette — not whichever theme the signage
+/// side's wall-clock schedule happens to have active — is authoritative
+/// for every Material default within. Every admin screen's `build`
+/// starts with this.
+class AdminTheme extends StatelessWidget {
+  const AdminTheme({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(data: AdminColors.of(context).themeData, child: child);
+  }
 }
 
 /// Caps content width on the web so wide viewports don't stretch cards
@@ -272,27 +346,34 @@ class AdminTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surfaceRaised,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: c.hairlineBright),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        autofocus: autofocus,
-        autocorrect: false,
-        onSubmitted: onSubmitted,
-        style: TextStyle(color: c.textPrimary, fontSize: 15),
-        cursorColor: c.accent,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: c.textDim),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        ),
+    // A single InputDecoration owns the shape (fill + border) — no
+    // wrapping Container/DecoratedBox. Two independent shapes (an outer
+    // rounded container plus TextField's own decoration, which paints a
+    // sharp-cornered highlight/fill when given `InputBorder.none`) is
+    // exactly what produced the "square peeking out of a rounded
+    // rectangle" glitch; one shape can't visually conflict with itself.
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: c.hairlineBright, width: 0.8),
+    );
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      autofocus: autofocus,
+      autocorrect: false,
+      onSubmitted: onSubmitted,
+      style: TextStyle(color: c.textPrimary, fontSize: 15),
+      cursorColor: c.accent,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: c.textDim),
+        filled: true,
+        fillColor: c.surfaceRaised,
+        border: border,
+        enabledBorder: border,
+        focusedBorder: border.copyWith(borderSide: BorderSide(color: c.accent, width: 1.2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }

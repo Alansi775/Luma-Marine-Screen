@@ -103,7 +103,8 @@ class AdminScreen extends ConsumerWidget {
     final activePlaylistId = ref.watch(activePlaylistIdProvider).value;
     final email = ref.watch(authRepositoryProvider).currentUserEmail;
 
-    return Scaffold(
+    return AdminTheme(
+      child: Scaffold(
       backgroundColor: c.background,
       body: SafeArea(
         child: AdminPageWidth(
@@ -223,6 +224,7 @@ class AdminScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

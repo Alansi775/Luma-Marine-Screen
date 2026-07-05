@@ -61,7 +61,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
-    return Scaffold(
+    return AdminTheme(
+      child: Scaffold(
       backgroundColor: c.background,
       body: Stack(
         children: [
@@ -147,6 +148,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

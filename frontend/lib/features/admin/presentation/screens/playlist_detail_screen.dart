@@ -205,7 +205,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final playlist = playlists.where((p) => p.id == widget.playlistId).firstOrNull;
     final entries = ref.watch(playlistEntriesProvider(widget.playlistId));
 
-    return Scaffold(
+    return AdminTheme(
+      child: Scaffold(
       backgroundColor: c.background,
       body: Stack(
         children: [
@@ -335,6 +336,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           ),
           if (_isUploading) UploadEdgeGlow(progress: _progress),
         ],
+      ),
       ),
     );
   }
