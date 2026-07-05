@@ -5,6 +5,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/di/core_providers.dart';
+import '../../../../core/logging/app_logger.dart';
 import 'playback_providers.dart';
 
 part 'playlist_player_controller.g.dart';
@@ -44,13 +45,26 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   static const _disposeTimeout = Duration(seconds: 5);
   static const _maxAttemptsPerVideo = 2;
 
+  /// How often to check whether a "playing" video's position is actually
+  /// moving. flutter-pi's `play()` call has been confirmed to report
+  /// success back to Dart — the method channel call returns, no exception,
+  /// nothing timed out — even when the native GStreamer pipeline is stuck
+  /// and never actually starts producing frames. A timeout around the
+  /// `play()` call itself can't catch that, because there's nothing for it
+  /// to time out on; the only reliable signal is that the reported
+  /// position stops advancing.
+  static const _stallCheckInterval = Duration(seconds: 4);
+  static const _stallChecksBeforeRecovery = 2;
+
   List<String> _queue = [];
   String? _currentPath;
   bool _advancing = false;
+  Timer? _stallWatchdog;
 
   @override
   VideoPlayerController? build() {
     ref.onDispose(() {
+      _stallWatchdog?.cancel();
       state?.dispose();
     });
 
@@ -98,6 +112,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
     // run. If it doesn't finish in time, abandon it and move on; a leaked
     // native player is a far smaller problem than a signage screen that
     // never recovers.
+    _stallWatchdog?.cancel();
     final previous = state;
     state = null;
     if (previous != null) {
@@ -135,6 +150,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
         await controller.initialize().timeout(_initializeTimeout);
         await controller.play().timeout(_initializeTimeout);
         state = controller;
+        _startStallWatchdog(controller, path, logger);
         return;
       } on TimeoutException {
         logger.warning(
@@ -149,5 +165,56 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
     if (_currentPath == path) {
       await _playNext();
     }
+  }
+
+  /// Polls `controller.value.position` and recovers if it stops moving
+  /// for [_stallChecksBeforeRecovery] consecutive checks while the video
+  /// is supposedly playing. See the field doc on [_stallCheckInterval] for
+  /// why this exists instead of just trusting `play()`'s return value.
+  void _startStallWatchdog(VideoPlayerController controller, String path, AppLogger logger) {
+    Duration? lastPosition;
+    var stalledChecks = 0;
+
+    _stallWatchdog = Timer.periodic(_stallCheckInterval, (timer) {
+      if (state != controller || _advancing) {
+        timer.cancel();
+        return;
+      }
+
+      final value = controller.value;
+      if (!value.isInitialized || !value.isPlaying || value.isCompleted) {
+        stalledChecks = 0;
+        lastPosition = null;
+        return;
+      }
+
+      if (lastPosition != null && value.position == lastPosition) {
+        stalledChecks++;
+      } else {
+        stalledChecks = 0;
+      }
+      lastPosition = value.position;
+
+      if (stalledChecks >= _stallChecksBeforeRecovery) {
+        timer.cancel();
+        _advancing = true;
+        logger.warning(
+          'Playback stalled at ${value.position} (native play() reported success but '
+          'produced no further frames) — recovering: $path',
+        );
+        unawaited(_recoverFromStall(controller));
+      }
+    });
+  }
+
+  Future<void> _recoverFromStall(VideoPlayerController stuck) async {
+    if (state == stuck) state = null;
+    try {
+      await stuck.dispose().timeout(_disposeTimeout);
+    } on TimeoutException {
+      // Same tradeoff as everywhere else here: a leaked native player beats
+      // a screen that never recovers.
+    }
+    await _playNext();
   }
 }
