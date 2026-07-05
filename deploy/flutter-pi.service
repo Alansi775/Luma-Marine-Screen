@@ -1,0 +1,19 @@
+[Unit]
+Description=PANO signage player (flutter-pi)
+After=multi-user.target
+StartLimitIntervalSec=300
+StartLimitBurst=15
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/flutter-pi --release /opt/luma-marine/src/frontend/build/flutter-pi/x64-generic
+Environment=XDG_RUNTIME_DIR=/run/flutter-pi
+RuntimeDirectory=flutter-pi
+RuntimeDirectoryMode=0700
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -23,7 +23,7 @@ Future<List<Override>> bootstrap() async {
 
   final logger = PlatformLogger.consoleOnly();
   logger.info('PANO starting');
-  startPlatformThreadWatchdog(logger);
+  startPlatformThreadWatchdog();
 
   final directories = DefaultAppDirectories();
   await directories.ensureCreated();

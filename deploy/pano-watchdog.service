@@ -1,0 +1,14 @@
+[Unit]
+Description=External liveness watchdog for PANO signage player
+After=flutter-pi.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/pano-watchdog.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
