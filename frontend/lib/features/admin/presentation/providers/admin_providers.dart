@@ -34,6 +34,7 @@ PlaylistManagementRepository playlistManagementRepository(Ref ref) {
   if (!firebaseAvailable) return UnavailablePlaylistManagementRepository();
   return FirebasePlaylistManagementRepository(
     FirebaseFirestore.instance,
+    FirebaseStorage.instance,
     ref.watch(deviceChangeSignalProvider),
   );
 }

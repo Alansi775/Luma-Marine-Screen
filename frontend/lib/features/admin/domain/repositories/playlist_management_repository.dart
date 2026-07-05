@@ -18,12 +18,22 @@ abstract class PlaylistManagementRepository {
 
   /// Also deletes the playlist's entries, and clears
   /// `devices/{deviceId}.activePlaylistId` if this was the active one —
-  /// Firestore doesn't cascade-delete subcollections on its own.
+  /// Firestore doesn't cascade-delete subcollections on its own. Any video
+  /// that ends up with no remaining entry in *any* playlist is deleted
+  /// from the catalog and Storage too — see [removeVideoFromPlaylist].
   Future<void> deletePlaylist(String playlistId);
 
   Stream<List<PlaylistVideoItem>> watchPlaylistEntries(String playlistId);
 
-  Future<void> removeVideoFromPlaylist({required String playlistId, required String entryId});
+  /// Removing a video's last reference deletes it for good: the
+  /// `videos/{videoId}` catalog doc and its Storage file both go too.
+  /// Without this, every uploaded video lives in Storage forever even
+  /// after being removed from every playlist that ever referenced it.
+  Future<void> removeVideoFromPlaylist({
+    required String playlistId,
+    required String entryId,
+    required String videoId,
+  });
 
   Future<void> moveVideoToPlaylist({
     required String fromPlaylistId,

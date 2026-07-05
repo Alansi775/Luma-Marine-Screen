@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../features/admin/presentation/theme/admin_design_kit.dart';
 import '../../../../routing/app_routes.dart';
 import '../../../../shared/widgets/brand_logo.dart';
 import '../providers/auth_providers.dart';
 
 /// Reached only via the hidden long-press gesture on the idle/splash
 /// screen (see shared/widgets/bootstrap_screen.dart) — there's no visible
-/// link to this from normal signage playback. Full-bleed, no app bar:
-/// this should read as a deliberate brand moment, not a generic settings
-/// page.
+/// link to this from normal signage playback. Full-bleed pure black,
+/// deliberately unlike the signage side's adaptive theme (see
+/// `AdminPalette`'s doc comment) — this should read as stepping into a
+/// control room, not a settings page.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -33,6 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
@@ -58,80 +61,161 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned(
-              top: 8,
-              left: 8,
-              child: IconButton(
-                onPressed: () => context.go(AppRoutes.nowPlaying),
-                icon: const Icon(Icons.arrow_back),
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 380),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Center(child: BrandLogo(size: 96)),
-                      const SizedBox(height: 40),
-                      Text(
-                        'ADMIN ACCESS',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.labelSmall,
-                      ),
-                      const SizedBox(height: 32),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        autocorrect: false,
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        onSubmitted: (_) => _submit(),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: 'Password'),
-                        onSubmitted: (_) => _submit(),
-                      ),
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: 20),
-                        Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: theme.colorScheme.error),
-                        ),
-                      ],
-                      const SizedBox(height: 28),
-                      FilledButton(
-                        onPressed: _isSubmitting ? null : _submit,
-                        child: _isSubmitting
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: theme.colorScheme.onPrimary,
-                                ),
-                              )
-                            : const Text('SIGN IN'),
-                      ),
-                    ],
+      backgroundColor: AdminPalette.black,
+      body: Stack(
+        children: [
+          // A faint, fixed radial glow behind the panel — the only color
+          // in an otherwise pure-black frame.
+          const Positioned.fill(child: _AmbientGlow()),
+          SafeArea(
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: IconButton(
+                    onPressed: () => context.go(AppRoutes.nowPlaying),
+                    icon: const Icon(Icons.arrow_back),
+                    color: AdminPalette.textDim,
                   ),
                 ),
-              ),
+                Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: GlassPanel(
+                        borderRadius: 32,
+                        padding: const EdgeInsets.fromLTRB(40, 48, 40, 40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Center(child: BrandLogo(size: 84)),
+                            const SizedBox(height: 36),
+                            const Text(
+                              'ADMIN ACCESS',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AdminPalette.textDim,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 3,
+                              ),
+                            ),
+                            const SizedBox(height: 36),
+                            _AdminTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              keyboardType: TextInputType.emailAddress,
+                              onSubmitted: (_) => _submit(),
+                            ),
+                            const SizedBox(height: 14),
+                            _AdminTextField(
+                              controller: _passwordController,
+                              label: 'Password',
+                              obscureText: true,
+                              onSubmitted: (_) => _submit(),
+                            ),
+                            if (_errorMessage != null) ...[
+                              const SizedBox(height: 20),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: AdminPalette.danger, fontSize: 13),
+                              ),
+                            ],
+                            const SizedBox(height: 28),
+                            Align(
+                              alignment: Alignment.center,
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      height: 52,
+                                      width: 52,
+                                      child: Center(
+                                        child: SizedBox(
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AdminPalette.accent,
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : AdminPillButton(label: 'Sign In', onPressed: _submit),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmbientGlow extends StatelessWidget {
+  const _AmbientGlow();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: const Alignment(0, -0.2),
+          radius: 1.1,
+          colors: [
+            AdminPalette.accent.withValues(alpha: 0.10),
+            AdminPalette.black,
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminTextField extends StatelessWidget {
+  const _AdminTextField({
+    required this.controller,
+    required this.label,
+    this.obscureText = false,
+    this.keyboardType,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AdminPalette.surfaceRaised,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AdminPalette.hairline),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        autocorrect: false,
+        onSubmitted: onSubmitted,
+        style: const TextStyle(color: AdminPalette.textPrimary),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: AdminPalette.textDim),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
         ),
       ),
     );

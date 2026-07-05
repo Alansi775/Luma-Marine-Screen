@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../../core/constants/firestore_paths.dart';
 import '../../../../core/errors/app_exception.dart';
@@ -8,9 +9,10 @@ import '../../domain/entities/playlist_video_item.dart';
 import '../../domain/repositories/playlist_management_repository.dart';
 
 class FirebasePlaylistManagementRepository implements PlaylistManagementRepository {
-  FirebasePlaylistManagementRepository(this._firestore, this._changeSignal);
+  FirebasePlaylistManagementRepository(this._firestore, this._storage, this._changeSignal);
 
   final FirebaseFirestore _firestore;
+  final FirebaseStorage _storage;
   final DeviceChangeSignal _changeSignal;
 
   CollectionReference<Map<String, dynamic>> get _playlists => _firestore.collection('playlists');
@@ -70,6 +72,8 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
   Future<void> deletePlaylist(String playlistId) async {
     try {
       final entries = await _playlists.doc(playlistId).collection('entries').get();
+      final videoIds = entries.docs.map((e) => e.data()['videoId'] as String).toList();
+
       final batch = _firestore.batch();
       for (final entry in entries.docs) {
         batch.delete(entry.reference);
@@ -80,6 +84,9 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       final device = await _defaultDevice.get();
       if (device.data()?['activePlaylistId'] == playlistId) {
         await _defaultDevice.set({'activePlaylistId': null}, SetOptions(merge: true));
+      }
+      for (final videoId in videoIds) {
+        await _deleteVideoIfOrphaned(videoId);
       }
       await _notifyDevice();
     } catch (e) {
@@ -114,13 +121,45 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
   }
 
   @override
-  Future<void> removeVideoFromPlaylist({required String playlistId, required String entryId}) async {
+  Future<void> removeVideoFromPlaylist({
+    required String playlistId,
+    required String entryId,
+    required String videoId,
+  }) async {
     try {
       await _playlists.doc(playlistId).collection('entries').doc(entryId).delete();
+      await _deleteVideoIfOrphaned(videoId);
       await _notifyDevice();
     } catch (e) {
       throw NetworkException('Failed to remove video from playlist', cause: e);
     }
+  }
+
+  /// Deletes a video's catalog doc and Storage file once nothing
+  /// references it anymore. Checked by scanning every playlist's entries
+  /// rather than a collection-group query, since that would need a
+  /// manually-enabled Firestore index this project doesn't have — fine at
+  /// this scale (a handful of playlists), and avoids a query that would
+  /// silently return nothing until that index exists.
+  Future<void> _deleteVideoIfOrphaned(String videoId) async {
+    final playlists = await _playlists.get();
+    for (final playlist in playlists.docs) {
+      final stillUsed = await playlist.reference.collection('entries').where('videoId', isEqualTo: videoId).limit(1).get();
+      if (stillUsed.docs.isNotEmpty) return;
+    }
+
+    final videoDoc = await _firestore.collection(FirestorePaths.videos).doc(videoId).get();
+    final storagePath = videoDoc.data()?['storagePath'] as String?;
+    if (storagePath != null) {
+      try {
+        await _storage.ref(storagePath).delete();
+      } on FirebaseException catch (e) {
+        // Already gone (e.g. a previous delete partially succeeded) —
+        // still remove the catalog doc below rather than leaving it stuck.
+        if (e.code != 'object-not-found') rethrow;
+      }
+    }
+    await videoDoc.reference.delete();
   }
 
   @override
@@ -216,7 +255,11 @@ class UnavailablePlaylistManagementRepository implements PlaylistManagementRepos
   @override
   Stream<List<PlaylistVideoItem>> watchPlaylistEntries(String playlistId) => Stream.value(const []);
   @override
-  Future<void> removeVideoFromPlaylist({required String playlistId, required String entryId}) async =>
+  Future<void> removeVideoFromPlaylist({
+    required String playlistId,
+    required String entryId,
+    required String videoId,
+  }) async =>
       _unavailable();
   @override
   Future<void> moveVideoToPlaylist({
