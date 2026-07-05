@@ -245,6 +245,129 @@ class _AdminPillButtonState extends State<AdminPillButton> {
   }
 }
 
+/// A themed text field for every rename/create dialog and the login
+/// form. Deliberately *not* a full pill and *not* pure black in dark
+/// mode — a solid-black fill sitting inside an already-dark glass panel
+/// has almost no contrast and reads as a hole in the layout rather than
+/// an input. `surfaceRaised` gives it a visible, comfortable-contrast
+/// surface in both themes.
+class AdminTextField extends StatelessWidget {
+  const AdminTextField({
+    super.key,
+    required this.controller,
+    this.label,
+    this.obscureText = false,
+    this.keyboardType,
+    this.autofocus = false,
+    this.onSubmitted,
+  });
+
+  final TextEditingController controller;
+  final String? label;
+  final bool obscureText;
+  final TextInputType? keyboardType;
+  final bool autofocus;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: c.surfaceRaised,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: c.hairlineBright),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        autofocus: autofocus,
+        autocorrect: false,
+        onSubmitted: onSubmitted,
+        style: TextStyle(color: c.textPrimary, fontSize: 15),
+        cursorColor: c.accent,
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: c.textDim),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        ),
+      ),
+    );
+  }
+}
+
+/// A small animated "now playing" indicator — three bars pulsing at
+/// independent phases, the same visual language real media apps
+/// (Spotify, Apple Music) use for "this is the one playing" — instead of
+/// a pulsing-dot-plus-caption badge.
+class LiveEqualizer extends StatefulWidget {
+  const LiveEqualizer({super.key, this.color, this.size = 14});
+
+  final Color? color;
+  final double size;
+
+  @override
+  State<LiveEqualizer> createState() => _LiveEqualizerState();
+}
+
+class _LiveEqualizerState extends State<LiveEqualizer> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
+    final color = widget.color ?? c.accent;
+    const phases = [0.0, 0.35, 0.7];
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final phase in phases)
+                _EqualizerBar(
+                  // A bouncing 0..1..0 triangle wave per bar, phase-shifted
+                  // so the three don't move in lockstep.
+                  height: widget.size * (0.3 + 0.7 * (1 - (2 * (((_controller.value + phase) % 1.0) - 0.5)).abs())),
+                  color: color,
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _EqualizerBar extends StatelessWidget {
+  const _EqualizerBar({required this.height, required this.color});
+
+  final double height;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 3,
+      height: height.clamp(2, double.infinity),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+    );
+  }
+}
+
 /// Monospaced technical readout — durations, counters, timestamps — kept
 /// visually distinct from the humanist type used for names/labels.
 class MonoLabel extends StatelessWidget {

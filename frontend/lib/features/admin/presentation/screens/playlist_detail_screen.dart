@@ -169,23 +169,10 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               children: [
                 Text(title, style: TextStyle(color: c.textPrimary, fontSize: 24, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: c.background,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: c.hairlineBright),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    autofocus: true,
-                    cursorColor: c.accent,
-                    style: TextStyle(color: c.textPrimary, fontSize: 16),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                    ),
-                    onSubmitted: (value) => Navigator.pop(context, value),
-                  ),
+                AdminTextField(
+                  controller: controller,
+                  autofocus: true,
+                  onSubmitted: (value) => Navigator.pop(context, value),
                 ),
                 const SizedBox(height: 32),
                 Row(

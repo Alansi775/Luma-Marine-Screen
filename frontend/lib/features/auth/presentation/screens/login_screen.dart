@@ -99,14 +99,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: TextStyle(color: c.textDim, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 3),
                             ),
                             const SizedBox(height: 36),
-                            _AdminTextField(
+                            AdminTextField(
                               controller: _emailController,
                               label: 'Email',
                               keyboardType: TextInputType.emailAddress,
                               onSubmitted: (_) => _submit(),
                             ),
                             const SizedBox(height: 14),
-                            _AdminTextField(
+                            AdminTextField(
                               controller: _passwordController,
                               label: 'Password',
                               obscureText: true,
@@ -166,49 +166,6 @@ class _AmbientGlow extends StatelessWidget {
           center: const Alignment(0, -0.2),
           radius: 1.1,
           colors: [color.withValues(alpha: 0.10), background],
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminTextField extends StatelessWidget {
-  const _AdminTextField({
-    required this.controller,
-    required this.label,
-    this.obscureText = false,
-    this.keyboardType,
-    this.onSubmitted,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final ValueChanged<String>? onSubmitted;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AdminColors.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: c.surfaceRaised,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.hairline),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        autocorrect: false,
-        onSubmitted: onSubmitted,
-        style: TextStyle(color: c.textPrimary),
-        cursorColor: c.accent,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: c.textDim),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
         ),
       ),
     );

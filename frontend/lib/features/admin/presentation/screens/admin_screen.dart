@@ -261,33 +261,16 @@ class _MasterOnAirModule extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                child: Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: c.accent,
-                            shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: c.accent, blurRadius: 6)],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'BROADCASTING NOW',
-                          style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2.5),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      playlist.name,
-                      style: TextStyle(color: c.textPrimary, fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: -1),
-                      overflow: TextOverflow.ellipsis,
+                    LiveEqualizer(color: c.accent, size: 18),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        playlist.name,
+                        style: TextStyle(color: c.textPrimary, fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: -1),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -402,23 +385,10 @@ class _AdminDialog extends StatelessWidget {
               const SizedBox(height: 16),
               if (body != null) Text(body!, style: TextStyle(color: c.textDim, fontSize: 15, height: 1.6)),
               if (field != null)
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: c.background,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: c.hairlineBright),
-                  ),
-                  child: TextField(
-                    controller: field,
-                    autofocus: true,
-                    cursorColor: c.accent,
-                    style: TextStyle(color: c.textPrimary, fontSize: 16),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                    ),
-                    onSubmitted: (value) => Navigator.pop(context, value),
-                  ),
+                AdminTextField(
+                  controller: field!,
+                  autofocus: true,
+                  onSubmitted: (value) => Navigator.pop(context, value),
                 ),
               const SizedBox(height: 32),
               Row(
