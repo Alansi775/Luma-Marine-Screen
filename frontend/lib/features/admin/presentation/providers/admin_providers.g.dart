@@ -152,7 +152,7 @@ final class PlaylistManagementRepositoryProvider
 }
 
 String _$playlistManagementRepositoryHash() =>
-    r'0f54af6de2f62590525f205863e5ca1262e80b62';
+    r'09aaa686e9cf7417c46d8b86536fe08fbd105bae';
 
 @ProviderFor(adminPlaylists)
 final adminPlaylistsProvider = AdminPlaylistsProvider._();

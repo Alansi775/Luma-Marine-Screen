@@ -12,6 +12,7 @@ class PlaylistVideoItem {
     required this.name,
     this.durationSeconds,
     this.storagePath,
+    this.uploadedAt,
   });
 
   final String entryId;
@@ -28,4 +29,9 @@ class PlaylistVideoItem {
   /// only if the underlying video doc was deleted out from under this
   /// entry.
   final String? storagePath;
+
+  /// When this video was uploaded (the catalog doc's `createdAt`). Null
+  /// only if the doc predates that field or was deleted out from under
+  /// this entry.
+  final DateTime? uploadedAt;
 }

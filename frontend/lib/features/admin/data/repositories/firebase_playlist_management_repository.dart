@@ -115,6 +115,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
           name: (videoData?['name'] as String?) ?? '(deleted video)',
           durationSeconds: videoData?['durationSeconds'] as int?,
           storagePath: videoData?['storagePath'] as String?,
+          uploadedAt: (videoData?['createdAt'] as Timestamp?)?.toDate(),
         ));
       }
       return items;

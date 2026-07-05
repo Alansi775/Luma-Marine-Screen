@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
@@ -12,6 +15,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../domain/entities/admin_playlist.dart';
 import '../../domain/entities/playlist_video_item.dart';
 import '../providers/admin_providers.dart';
+import '../providers/thumbnail_cache.dart';
 import '../theme/admin_design_kit.dart';
 
 /// One playlist's contents: reorder (drag any card onto another), rename
@@ -76,6 +80,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
           entryId: item.entryId,
           videoId: item.videoId,
         );
+    // The video (and its Storage file) may just have been deleted for
+    // good — see removeVideoFromPlaylist's orphan cleanup — so its
+    // cached thumbnail would otherwise sit around forever pointing at
+    // nothing useful.
+    ref.read(thumbnailCacheProvider).evict(item.videoId);
   }
 
   Future<void> _moveVideo(PlaylistVideoItem item) async {
@@ -198,6 +207,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     return '$minutes:${remaining.toString().padLeft(2, '0')}';
   }
 
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', //
+  ];
+
+  String? _formatUploadedAt(DateTime? dt) {
+    if (dt == null) return null;
+    final local = dt.toLocal();
+    final hour24 = local.hour;
+    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+    final period = hour24 < 12 ? 'AM' : 'PM';
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '${_months[local.month - 1]} ${local.day}, ${local.year} · $hour12:$minute $period';
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
@@ -261,7 +284,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                               padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
                               gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                                 maxCrossAxisExtent: 300,
-                                mainAxisExtent: 240,
+                                mainAxisExtent: 264,
                                 crossAxisSpacing: 20,
                                 mainAxisSpacing: 20,
                               ),
@@ -272,6 +295,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                                   key: ValueKey('cell-${item.entryId}'),
                                   item: item,
                                   durationLabel: _formatDuration(item.durationSeconds),
+                                  uploadedAtLabel: _formatUploadedAt(item.uploadedAt),
                                   onRename: () => _renameVideo(item),
                                   onMove: () => _moveVideo(item),
                                   onRemove: () => _removeVideo(item),
@@ -342,15 +366,16 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 }
 
-/// One video's card: a live (paused) preview of its first frame, its
-/// duration as a corner badge, its name, and a glass menu — the whole
-/// card is the drag handle (long-press to pick it up), so there's no
-/// separate drag-indicator icon to get wrong.
+/// One video's card: a cached thumbnail of its actual first frame, its
+/// duration as a corner badge, its name, upload date/time, and a glass
+/// menu — the whole card is the drag handle (long-press to pick it up),
+/// so there's no separate drag-indicator icon to get wrong.
 class _VideoGridCell extends StatelessWidget {
   const _VideoGridCell({
     super.key,
     required this.item,
     required this.durationLabel,
+    required this.uploadedAtLabel,
     required this.onRename,
     required this.onMove,
     required this.onRemove,
@@ -358,6 +383,7 @@ class _VideoGridCell extends StatelessWidget {
 
   final PlaylistVideoItem item;
   final String? durationLabel;
+  final String? uploadedAtLabel;
   final VoidCallback onRename;
   final VoidCallback onMove;
   final VoidCallback onRemove;
@@ -379,7 +405,7 @@ class _VideoGridCell extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: _VideoThumbnail(storagePath: item.storagePath),
+                  child: _VideoThumbnail(videoId: item.videoId, storagePath: item.storagePath),
                 ),
                 Positioned(
                   top: 8,
@@ -392,38 +418,38 @@ class _VideoGridCell extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (durationLabel != null)
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.schedule_rounded, size: 11, color: Colors.white70),
-                            const SizedBox(width: 4),
-                            MonoLabel(durationLabel!, color: Colors.white, fontSize: 11),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-            child: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined, size: 11, color: c.textDim),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: MonoLabel(uploadedAtLabel ?? '—', fontSize: 11),
+                    ),
+                    if (durationLabel != null) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.schedule_rounded, size: 11, color: c.textDim),
+                      const SizedBox(width: 4),
+                      MonoLabel(durationLabel!, fontSize: 11),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -432,29 +458,46 @@ class _VideoGridCell extends StatelessWidget {
   }
 }
 
-/// Resolves the video's Storage download URL and shows its first frame
-/// via a paused `VideoPlayerController` — a real thumbnail of the actual
-/// content, not a generic movie icon.
-class _VideoThumbnail extends StatefulWidget {
-  const _VideoThumbnail({required this.storagePath});
+/// Shows the video's actual first frame — cached after the first
+/// generation (see `ThumbnailCache`), so re-opening a playlist never
+/// re-pays the cost of spinning up a decoder per video again.
+///
+/// Generation path (cache miss only): create a `VideoPlayerController`,
+/// let it buffer frame 0, render it once into an off-tree
+/// `RepaintBoundary`, capture that as a PNG, cache the bytes, then
+/// immediately dispose the controller. Holding one real decoder per
+/// grid cell indefinitely — which is what this used to do — is exactly
+/// the kind of resource pressure the signage side's playback watchdog
+/// had to be built to survive; there is no reason the admin panel
+/// should create the same problem for itself just to show a preview.
+class _VideoThumbnail extends ConsumerStatefulWidget {
+  const _VideoThumbnail({required this.videoId, required this.storagePath});
 
+  final String videoId;
   final String? storagePath;
 
   @override
-  State<_VideoThumbnail> createState() => _VideoThumbnailState();
+  ConsumerState<_VideoThumbnail> createState() => _VideoThumbnailState();
 }
 
-class _VideoThumbnailState extends State<_VideoThumbnail> {
+class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
+  final _boundaryKey = GlobalKey();
   VideoPlayerController? _controller;
+  Uint8List? _bytes;
   bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    final cached = ref.read(thumbnailCacheProvider).get(widget.videoId);
+    if (cached != null) {
+      _bytes = cached;
+    } else {
+      _generate();
+    }
   }
 
-  Future<void> _load() async {
+  Future<void> _generate() async {
     final path = widget.storagePath;
     if (path == null) {
       setState(() => _failed = true);
@@ -469,6 +512,35 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
         return;
       }
       setState(() => _controller = controller);
+      // Two frames plus a short delay: the first post-frame callback can
+      // fire before the video texture has actually painted anything
+      // (a real gotcha with hardware-texture-backed video on web), which
+      // would capture a blank frame and cache it forever.
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      if (mounted) await _capture();
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  Future<void> _capture() async {
+    try {
+      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        setState(() => _failed = true);
+        return;
+      }
+      final image = await boundary.toImage(pixelRatio: 1.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      final bytes = byteData!.buffer.asUint8List();
+      ref.read(thumbnailCacheProvider).put(widget.videoId, bytes);
+
+      final controller = _controller;
+      _controller = null;
+      unawaited(controller?.dispose());
+
+      if (mounted) setState(() => _bytes = bytes);
     } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
@@ -483,10 +555,17 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
   @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
+    final bytes = _bytes;
+    if (bytes != null) {
+      return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
+    }
+
     final controller = _controller;
     if (controller != null && controller.value.isInitialized) {
-      return ColoredBox(
-        color: Colors.black,
+      // Rendered at real size so the captured PNG matches what a viewer
+      // would actually see, not a scaled-down preview.
+      return RepaintBoundary(
+        key: _boundaryKey,
         child: FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(
@@ -497,6 +576,7 @@ class _VideoThumbnailState extends State<_VideoThumbnail> {
         ),
       );
     }
+
     return ColoredBox(
       color: c.surfaceRaised,
       child: Center(
