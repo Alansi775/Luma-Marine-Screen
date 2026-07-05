@@ -114,6 +114,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
           sortOrder: entryData['sortOrder'] as int,
           name: (videoData?['name'] as String?) ?? '(deleted video)',
           durationSeconds: videoData?['durationSeconds'] as int?,
+          storagePath: videoData?['storagePath'] as String?,
         ));
       }
       return items;

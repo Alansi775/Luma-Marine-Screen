@@ -87,9 +87,10 @@ class AdminScreen extends ConsumerWidget {
   }
 
   void _showError(BuildContext context, String message) {
+    final c = AdminColors.of(context);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message, style: const TextStyle(color: AdminPalette.textPrimary)),
-      backgroundColor: AdminPalette.surfaceRaised,
+      content: Text(message, style: TextStyle(color: c.textPrimary)),
+      backgroundColor: c.surfaceRaised,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
@@ -97,12 +98,13 @@ class AdminScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = AdminColors.of(context);
     final playlists = ref.watch(adminPlaylistsProvider);
     final activePlaylistId = ref.watch(activePlaylistIdProvider).value;
     final email = ref.watch(authRepositoryProvider).currentUserEmail;
 
     return Scaffold(
-      backgroundColor: AdminPalette.black,
+      backgroundColor: c.background,
       body: SafeArea(
         child: AdminPageWidth(
           child: Column(
@@ -118,37 +120,24 @@ class AdminScreen extends ConsumerWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'CONTROL CENTER',
-                          style: TextStyle(
-                            color: AdminPalette.textDim,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 4,
-                          ),
+                          style: TextStyle(color: c.textDim, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 4),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           email ?? 'Luma Node',
-                          style: const TextStyle(
-                            color: AdminPalette.textPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            letterSpacing: -0.5,
-                          ),
+                          style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.5),
                         ),
                       ],
                     ),
                     const Spacer(),
                     Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AdminPalette.hairline),
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: BoxDecoration(border: Border.all(color: c.hairline), shape: BoxShape.circle),
                       child: IconButton(
                         onPressed: () => _signOut(context, ref),
                         icon: const Icon(Icons.power_settings_new_rounded, size: 20),
-                        color: AdminPalette.textDim,
+                        color: c.textDim,
                         tooltip: 'Sign out',
                         splashRadius: 24,
                       ),
@@ -165,7 +154,7 @@ class AdminScreen extends ConsumerWidget {
               // technical grid underneath.
               Expanded(
                 child: playlists.when(
-                  loading: () => const Center(child: CircularProgressIndicator(color: AdminPalette.accent)),
+                  loading: () => Center(child: CircularProgressIndicator(color: c.accent)),
                   error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'System fault.\n$e'),
                   data: (items) {
                     if (items.isEmpty) {
@@ -259,6 +248,7 @@ class _MasterOnAirModule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return OnAirGlow(
       borderRadius: 32,
       child: GlassPanel(
@@ -280,33 +270,23 @@ class _MasterOnAirModule extends StatelessWidget {
                         Container(
                           width: 7,
                           height: 7,
-                          decoration: const BoxDecoration(
-                            color: AdminPalette.accent,
+                          decoration: BoxDecoration(
+                            color: c.accent,
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: AdminPalette.accent, blurRadius: 6)],
+                            boxShadow: [BoxShadow(color: c.accent, blurRadius: 6)],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        const Text(
+                        Text(
                           'BROADCASTING NOW',
-                          style: TextStyle(
-                            color: AdminPalette.accent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 2.5,
-                          ),
+                          style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2.5),
                         ),
                       ],
                     ),
                     const SizedBox(height: 14),
                     Text(
                       playlist.name,
-                      style: const TextStyle(
-                        color: AdminPalette.textPrimary,
-                        fontSize: 34,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -1,
-                      ),
+                      style: TextStyle(color: c.textPrimary, fontSize: 34, fontWeight: FontWeight.w700, letterSpacing: -1),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
@@ -317,8 +297,8 @@ class _MasterOnAirModule extends StatelessWidget {
               const SizedBox(width: 8),
               GlassMenuButton(
                 items: [
-                  GlassMenuItem(label: 'Rename Sequence', onTap: onRename),
-                  GlassMenuItem(label: 'Terminate Sequence', danger: true, onTap: onDelete),
+                  GlassMenuItem(label: 'Rename Sequence', icon: Icons.edit_outlined, onTap: onRename),
+                  GlassMenuItem(label: 'Terminate Sequence', icon: Icons.delete_outline, danger: true, onTap: onDelete),
                 ],
               ),
             ],
@@ -348,11 +328,11 @@ class _PlaylistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = 28.0; // زوايا محدبة ناعمة جداً
-    
-    final card = GlassPanel(
+    final c = AdminColors.of(context);
+    const radius = 28.0;
+
+    return GlassPanel(
       borderRadius: radius,
-      borderColor: isActive ? Colors.transparent : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(radius),
         onTap: onTap,
@@ -365,71 +345,25 @@ class _PlaylistCard extends StatelessWidget {
                 height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: isActive ? AdminPalette.accent.withValues(alpha: 0.1) : AdminPalette.surfaceRaised,
+                  color: c.surfaceRaised,
                   borderRadius: BorderRadius.circular(16),
-                  border: isActive ? Border.all(color: AdminPalette.accent.withValues(alpha: 0.3)) : null,
                 ),
-                child: Icon(
-                  Icons.layers_rounded, 
-                  color: isActive ? AdminPalette.accent : AdminPalette.textPrimary.withValues(alpha: 0.8),
-                  size: 24,
-                ),
+                child: Icon(Icons.layers_rounded, color: c.textPrimary.withValues(alpha: 0.8), size: 24),
               ),
               const SizedBox(width: 20),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      playlist.name,
-                      style: const TextStyle(
-                        color: AdminPalette.textPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.5,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (isActive) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AdminPalette.accent,
-                              shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: AdminPalette.accent, blurRadius: 4)],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'LIVE STREAM',
-                            style: TextStyle(
-                              color: AdminPalette.accent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  playlist.name,
+                  style: TextStyle(color: c.textPrimary, fontSize: 18, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              AdminPillButton(
-                label: isActive ? 'Halt' : 'Deploy',
-                filled: !isActive,
-                onPressed: onToggleActive,
-              ),
+              AdminPillButton(label: 'Deploy', onPressed: onToggleActive),
               const SizedBox(width: 8),
               GlassMenuButton(
                 items: [
-                  GlassMenuItem(label: 'Rename Sequence', onTap: onRename),
-                  GlassMenuItem(label: 'Terminate Sequence', danger: true, onTap: onDelete),
+                  GlassMenuItem(label: 'Rename Sequence', icon: Icons.edit_outlined, onTap: onRename),
+                  GlassMenuItem(label: 'Terminate Sequence', icon: Icons.delete_outline, danger: true, onTap: onDelete),
                 ],
               ),
             ],
@@ -437,9 +371,6 @@ class _PlaylistCard extends StatelessWidget {
         ),
       ),
     );
-
-    // تطبيق الـ Glow السينمائي للقائمة الفعالة فقط
-    return isActive ? OnAirGlow(borderRadius: radius, child: card) : card;
   }
 }
 
@@ -453,6 +384,7 @@ class _AdminDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
@@ -466,25 +398,21 @@ class _AdminDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5),
-              ),
+              Text(title, style: TextStyle(color: c.textPrimary, fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5)),
               const SizedBox(height: 16),
-              if (body != null)
-                Text(body!, style: const TextStyle(color: AdminPalette.textDim, fontSize: 15, height: 1.6)),
+              if (body != null) Text(body!, style: TextStyle(color: c.textDim, fontSize: 15, height: 1.6)),
               if (field != null)
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AdminPalette.black,
+                    color: c.background,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AdminPalette.hairlineBright),
+                    border: Border.all(color: c.hairlineBright),
                   ),
                   child: TextField(
                     controller: field,
                     autofocus: true,
-                    cursorColor: AdminPalette.accent,
-                    style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16),
+                    cursorColor: c.accent,
+                    style: TextStyle(color: c.textPrimary, fontSize: 16),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),

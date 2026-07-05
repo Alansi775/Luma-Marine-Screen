@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:video_player/video_player.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -10,6 +14,9 @@ import '../../domain/entities/playlist_video_item.dart';
 import '../providers/admin_providers.dart';
 import '../theme/admin_design_kit.dart';
 
+/// One playlist's contents: reorder (drag any card onto another), rename
+/// or remove videos, move a video to a different playlist, and upload
+/// new videos directly into this playlist.
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlistId});
 
@@ -74,10 +81,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   Future<void> _moveVideo(PlaylistVideoItem item) async {
     final playlists = ref.read(adminPlaylistsProvider).value ?? const <AdminPlaylist>[];
     final candidates = playlists.where((p) => p.id != widget.playlistId).toList();
+    final c = AdminColors.of(context);
     if (candidates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: const Text('No alternate arrays available for transfer.'),
-        backgroundColor: AdminPalette.surfaceRaised,
+        backgroundColor: c.surfaceRaised,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
       return;
@@ -97,11 +105,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                   child: Text(
                     'TRANSFER TO',
-                    style: TextStyle(color: AdminPalette.textDim, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2),
+                    style: TextStyle(color: c.textDim, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2),
                   ),
                 ),
                 for (final p in candidates)
@@ -109,7 +117,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     onTap: () => Navigator.pop(context, p),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      child: Text(p.name, style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16)),
+                      child: Text(p.name, style: TextStyle(color: c.textPrimary, fontSize: 16)),
                     ),
                   ),
               ],
@@ -128,11 +136,15 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
         );
   }
 
-  Future<void> _reorder(List<PlaylistVideoItem> items, int oldIndex, int newIndex) async {
-    if (newIndex > oldIndex) newIndex -= 1;
+  /// Drag-and-drop reorder: `toIndex` is the final slot the dragged card
+  /// was dropped onto — a plain remove-then-insert, unlike
+  /// `ReorderableListView`'s callback convention (which reports the
+  /// pre-removal index and needs a -1 correction). There's no listview
+  /// here anymore, so no correction is needed.
+  Future<void> _reorder(List<PlaylistVideoItem> items, int fromIndex, int toIndex) async {
     final reordered = List.of(items);
-    final moved = reordered.removeAt(oldIndex);
-    reordered.insert(newIndex, moved);
+    final moved = reordered.removeAt(fromIndex);
+    reordered.insert(toIndex, moved);
     await ref
         .read(playlistManagementRepositoryProvider)
         .reorderEntries(widget.playlistId, reordered.map((e) => e.entryId).toList());
@@ -140,6 +152,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
   Future<String?> _promptForText({required String title, required String initialValue}) {
     final controller = TextEditingController(text: initialValue);
+    final c = AdminColors.of(context);
     return showDialog<String>(
       context: context,
       builder: (context) => Dialog(
@@ -154,19 +167,19 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 24, fontWeight: FontWeight.w600)),
+                Text(title, style: TextStyle(color: c.textPrimary, fontSize: 24, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AdminPalette.black,
+                    color: c.background,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AdminPalette.hairlineBright),
+                    border: Border.all(color: c.hairlineBright),
                   ),
                   child: TextField(
                     controller: controller,
                     autofocus: true,
-                    cursorColor: AdminPalette.accent,
-                    style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16),
+                    cursorColor: c.accent,
+                    style: TextStyle(color: c.textPrimary, fontSize: 16),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -191,8 +204,8 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     );
   }
 
-  String _formatDuration(int? seconds) {
-    if (seconds == null) return '—:—';
+  String? _formatDuration(int? seconds) {
+    if (seconds == null) return null;
     final minutes = seconds ~/ 60;
     final remaining = seconds % 60;
     return '$minutes:${remaining.toString().padLeft(2, '0')}';
@@ -200,12 +213,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     final playlists = ref.watch(adminPlaylistsProvider).value ?? const <AdminPlaylist>[];
     final playlist = playlists.where((p) => p.id == widget.playlistId).firstOrNull;
     final entries = ref.watch(playlistEntriesProvider(widget.playlistId));
 
     return Scaffold(
-      backgroundColor: AdminPalette.black,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           SafeArea(
@@ -220,32 +234,24 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                         IconButton(
                           onPressed: () => context.pop(),
                           icon: const Icon(Icons.arrow_back_rounded),
-                          color: AdminPalette.textDim,
+                          color: c.textDim,
                           splashRadius: 24,
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
                             playlist?.name ?? 'Loading Sequence...',
-                            style: const TextStyle(
-                              color: AdminPalette.textPrimary,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -1,
-                            ),
+                            style: TextStyle(color: c.textPrimary, fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: -1),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (playlist != null)
                           Container(
-                            decoration: BoxDecoration(
-                              color: AdminPalette.surfaceRaised,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            decoration: BoxDecoration(color: c.surfaceRaised, borderRadius: BorderRadius.circular(12)),
                             child: IconButton(
                               onPressed: () => _renamePlaylist(playlist),
                               icon: const Icon(Icons.edit_rounded, size: 20),
-                              color: AdminPalette.textPrimary,
+                              color: c.textPrimary,
                               tooltip: 'Edit Sequence',
                             ),
                           ),
@@ -253,37 +259,54 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     ),
                   ),
 
-                  // --- List Area ---
+                  // --- Grid Area ---
                   Expanded(
                     child: entries.when(
-                      loading: () => const Center(child: CircularProgressIndicator(color: AdminPalette.accent)),
+                      loading: () => Center(child: CircularProgressIndicator(color: c.accent)),
                       error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Data failure.\n$e'),
                       data: (items) => items.isEmpty
                           ? const EmptyState(
                               icon: Icons.movie_filter_outlined,
                               message: 'Sequence is empty.\nInject media below.',
                             )
-                          : ReorderableListView.builder(
+                          : GridView.builder(
                               padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
-                              itemCount: items.length,
-                              proxyDecorator: (child, index, animation) => Material(
-                                color: Colors.transparent,
-                                child: Container(
-                                  decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20)]),
-                                  child: child,
-                                ),
+                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 300,
+                                mainAxisExtent: 240,
+                                crossAxisSpacing: 20,
+                                mainAxisSpacing: 20,
                               ),
-                              onReorder: (oldIndex, newIndex) => _reorder(items, oldIndex, newIndex),
+                              itemCount: items.length,
                               itemBuilder: (context, i) {
                                 final item = items[i];
-                                return _VideoRow(
-                                  key: ValueKey(item.entryId),
-                                  index: i,
+                                final cell = _VideoGridCell(
+                                  key: ValueKey('cell-${item.entryId}'),
                                   item: item,
                                   durationLabel: _formatDuration(item.durationSeconds),
                                   onRename: () => _renameVideo(item),
                                   onMove: () => _moveVideo(item),
                                   onRemove: () => _removeVideo(item),
+                                );
+                                return DragTarget<int>(
+                                  onWillAcceptWithDetails: (details) => details.data != i,
+                                  onAcceptWithDetails: (details) => _reorder(items, details.data, i),
+                                  builder: (context, candidateData, rejectedData) {
+                                    final isDropTarget = candidateData.isNotEmpty;
+                                    return AnimatedScale(
+                                      scale: isDropTarget ? 1.04 : 1.0,
+                                      duration: const Duration(milliseconds: 120),
+                                      child: LongPressDraggable<int>(
+                                        data: i,
+                                        feedback: Material(
+                                          color: Colors.transparent,
+                                          child: SizedBox(width: 260, height: 200, child: Opacity(opacity: 0.9, child: cell)),
+                                        ),
+                                        childWhenDragging: Opacity(opacity: 0.3, child: cell),
+                                        child: cell,
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             ),
@@ -296,34 +319,25 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                     child: Row(
                       children: [
                         if (_isUploading) ...[
-                          LiquidUploadRing(progress: _progress, size: 56), // الدائرة الكبيرة للتحميل
+                          LiquidUploadRing(progress: _progress, size: 56),
                           const SizedBox(width: 20),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('TRANSMITTING', style: TextStyle(color: AdminPalette.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
-                                SizedBox(height: 4),
-                                Text('Synchronizing node data...', style: TextStyle(color: AdminPalette.textDim, fontSize: 14)),
+                                Text('TRANSMITTING', style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
+                                const SizedBox(height: 4),
+                                Text('Synchronizing node data...', style: TextStyle(color: c.textDim, fontSize: 14)),
                               ],
                             ),
                           ),
                         ] else ...[
                           if (_message != null)
-                            Expanded(
-                              child: Text(
-                                _message!,
-                                style: const TextStyle(color: AdminPalette.textDim, fontSize: 14),
-                              ),
-                            )
+                            Expanded(child: Text(_message!, style: TextStyle(color: c.textDim, fontSize: 14)))
                           else
                             const Spacer(),
-                          AdminPillButton(
-                            label: 'Inject Media',
-                            icon: Icons.upload_rounded,
-                            onPressed: _pickAndUpload,
-                          ),
+                          AdminPillButton(label: 'Inject Media', icon: Icons.upload_rounded, onPressed: _pickAndUpload),
                         ],
                       ],
                     ),
@@ -332,7 +346,6 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               ),
             ),
           ),
-          // التوهج السينمائي العظيم وقت الرفع فقط
           if (_isUploading) UploadEdgeGlow(progress: _progress),
         ],
       ),
@@ -340,10 +353,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 }
 
-class _VideoRow extends StatelessWidget {
-  const _VideoRow({
+/// One video's card: a live (paused) preview of its first frame, its
+/// duration as a corner badge, its name, and a glass menu — the whole
+/// card is the drag handle (long-press to pick it up), so there's no
+/// separate drag-indicator icon to get wrong.
+class _VideoGridCell extends StatelessWidget {
+  const _VideoGridCell({
     super.key,
-    required this.index,
     required this.item,
     required this.durationLabel,
     required this.onRename,
@@ -351,56 +367,157 @@ class _VideoRow extends StatelessWidget {
     required this.onRemove,
   });
 
-  final int index;
   final PlaylistVideoItem item;
-  final String durationLabel;
+  final String? durationLabel;
   final VoidCallback onRename;
   final VoidCallback onMove;
   final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: GlassPanel(
-        borderRadius: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            MonoLabel((index + 1).toString().padLeft(2, '0'), color: AdminPalette.textDim.withValues(alpha: 0.5), fontSize: 15),
-            const SizedBox(width: 20),
-            Container(
-              width: 48,
-              height: 48,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AdminPalette.surfaceRaised,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AdminPalette.hairline),
-              ),
-              child: Icon(Icons.smart_display_rounded, size: 22, color: AdminPalette.textPrimary.withValues(alpha: 0.8)),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Text(
-                item.name,
-                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16, fontWeight: FontWeight.w500),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            MonoLabel(durationLabel, fontSize: 14),
-            const SizedBox(width: 16),
-            GlassMenuButton(
-              items: [
-                GlassMenuItem(label: 'Rename', onTap: onRename),
-                GlassMenuItem(label: 'Transfer…', onTap: onMove),
-                GlassMenuItem(label: 'Extract', danger: true, onTap: onRemove),
+    final c = AdminColors.of(context);
+    return GlassPanel(
+      borderRadius: 20,
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: _VideoThumbnail(storagePath: item.storagePath),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GlassMenuButton(
+                    items: [
+                      GlassMenuItem(label: 'Rename', icon: Icons.edit_outlined, onTap: onRename),
+                      GlassMenuItem(label: 'Transfer…', icon: Icons.drive_file_move_outline, onTap: onMove),
+                      GlassMenuItem(label: 'Extract', icon: Icons.delete_outline, danger: true, onTap: onRemove),
+                    ],
+                  ),
+                ),
+                if (durationLabel != null)
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.schedule_rounded, size: 11, color: Colors.white70),
+                            const SizedBox(width: 4),
+                            MonoLabel(durationLabel!, color: Colors.white, fontSize: 11),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.drag_indicator_rounded, color: AdminPalette.textDim.withValues(alpha: 0.3), size: 24),
-          ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Text(
+              item.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: c.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Resolves the video's Storage download URL and shows its first frame
+/// via a paused `VideoPlayerController` — a real thumbnail of the actual
+/// content, not a generic movie icon.
+class _VideoThumbnail extends StatefulWidget {
+  const _VideoThumbnail({required this.storagePath});
+
+  final String? storagePath;
+
+  @override
+  State<_VideoThumbnail> createState() => _VideoThumbnailState();
+}
+
+class _VideoThumbnailState extends State<_VideoThumbnail> {
+  VideoPlayerController? _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final path = widget.storagePath;
+    if (path == null) {
+      setState(() => _failed = true);
+      return;
+    }
+    try {
+      final url = await FirebaseStorage.instance.ref(path).getDownloadURL();
+      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+      await controller.initialize();
+      if (!mounted) {
+        unawaited(controller.dispose());
+        return;
+      }
+      setState(() => _controller = controller);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
+    final controller = _controller;
+    if (controller != null && controller.value.isInitialized) {
+      return ColoredBox(
+        color: Colors.black,
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: controller.value.size.width,
+            height: controller.value.size.height,
+            child: VideoPlayer(controller),
+          ),
         ),
+      );
+    }
+    return ColoredBox(
+      color: c.surfaceRaised,
+      child: Center(
+        child: _failed
+            ? Icon(Icons.movie_outlined, color: c.textDim, size: 28)
+            : SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: c.textDim),
+              ),
       ),
     );
   }

@@ -3,29 +3,109 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 /// The admin panel's own design language — deliberately unlike the
-/// signage screen's adaptive light/dark theme (see `theme/app_theme.dart`).
-/// Target look: a tactical/industrial control surface (DJI, professional
-/// broadcast tooling) — restrained, low-saturation accents used as glows
-/// and hairlines, never large flat saturated fills. Every "premium"
-/// surface here relies on real glassmorphism (`BackdropFilter` blur over
-/// a low-opacity fill), not just a solid dark grey box.
-class AdminPalette {
-  AdminPalette._();
+/// signage screen's *scheduled* light/dark theme (see
+/// `theme/app_theme.dart`, which switches on a 06:00/18:00 wall-clock
+/// schedule because it's mimicking ambient light on a yacht). The admin
+/// panel instead follows the *system's* light/dark preference, like any
+/// normal control-surface app — see [AdminColors.of].
+///
+/// Every card relies on real glassmorphism (`BackdropFilter` blur over a
+/// tinted, semi-opaque fill) rather than a flat box, but the fill is
+/// deliberately opaque *enough* that cards stay clearly readable against
+/// the page background in both themes — pure "glass" transparency reads
+/// as "everything is the same shade of dark" once the backdrop is also
+/// dark, which is the opposite of what a control surface needs.
+@immutable
+class AdminColors {
+  const AdminColors({
+    required this.background,
+    required this.surface,
+    required this.surfaceRaised,
+    required this.textPrimary,
+    required this.textDim,
+    required this.accent,
+    required this.danger,
+    required this.hairline,
+    required this.hairlineBright,
+    required this.cardOpacity,
+    required this.brightness,
+  });
 
-  static const Color black = Color(0xFF000000);
-  static const Color surface = Color(0xFF0A0A0A);
-  static const Color surfaceRaised = Color(0xFF141414);
-  static const Color accent = Color(0xFF3B82F6);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textDim = Color(0xFF8E8E93);
-  static const Color danger = Color(0xFFFF3B30);
-  static const Color hairline = Color(0x0DFFFFFF); // white @ 5%
-  static const Color hairlineBright = Color(0x26FFFFFF); // white @ 15%
+  final Color background;
+  final Color surface;
+  final Color surfaceRaised;
+  final Color textPrimary;
+  final Color textDim;
+  final Color accent;
+  final Color danger;
+  final Color hairline;
+  final Color hairlineBright;
+  final double cardOpacity;
+  final Brightness brightness;
+
+  bool get isDark => brightness == Brightness.dark;
+
+  static const dark = AdminColors(
+    background: Color(0xFF000000),
+    surface: Color(0xFF1C1C1E),
+    surfaceRaised: Color(0xFF2C2C2E),
+    textPrimary: Color(0xFFFFFFFF),
+    textDim: Color(0xFF98989F),
+    accent: Color(0xFF4DA3FF),
+    danger: Color(0xFFFF6961),
+    hairline: Color(0x24FFFFFF),
+    hairlineBright: Color(0x40FFFFFF),
+    cardOpacity: 0.82,
+    brightness: Brightness.dark,
+  );
+
+  static const light = AdminColors(
+    background: Color(0xFFEFEFF3),
+    surface: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFFFFFFF),
+    textPrimary: Color(0xFF1C1C1E),
+    textDim: Color(0xFF6C6C70),
+    accent: Color(0xFF0668E1),
+    danger: Color(0xFFD70015),
+    hairline: Color(0x1F000000),
+    hairlineBright: Color(0x33000000),
+    cardOpacity: 0.92,
+    brightness: Brightness.light,
+  );
+
+  /// Resolves against the *system's* theme preference, not the signage
+  /// side's wall-clock schedule.
+  static AdminColors of(BuildContext context) =>
+      MediaQuery.platformBrightnessOf(context) == Brightness.dark ? dark : light;
 }
 
 /// Caps content width on the web so wide viewports don't stretch cards
 /// into an illegible single row — every admin screen wraps its body in
-/// this.
+/// this, and paints the themed page background behind it.
+class AdminScaffold extends StatelessWidget {
+  const AdminScaffold({super.key, required this.body});
+
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
+    return Scaffold(
+      backgroundColor: c.background,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: body,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Deprecated alias kept only so screens mid-refactor still compile;
+/// prefer [AdminScaffold] which paints the correct themed background.
 class AdminPageWidth extends StatelessWidget {
   const AdminPageWidth({super.key, required this.child});
 
@@ -34,19 +114,15 @@ class AdminPageWidth extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: child,
-      ),
+      child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1200), child: child),
     );
   }
 }
 
-/// A real frosted-glass panel: heavy backdrop blur behind a *low-opacity*
-/// fill, so whatever's behind it (the pure black background, other
-/// panels) actually shows through softened — that translucency is what
-/// reads as "glass" instead of "flat grey box". Every card, dialog, and
-/// dropdown in the admin UI is built from this.
+/// A frosted-glass panel: backdrop blur behind a themed, mostly-opaque
+/// fill (see the class doc on [AdminColors] for why it's not more
+/// transparent) with a hairline border. Every card, dialog, and dropdown
+/// in the admin UI is built from this.
 class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
@@ -65,16 +141,20 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 32, sigmaY: 32),
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: (elevated ? AdminPalette.surfaceRaised : AdminPalette.surface).withValues(alpha: 0.42),
+            color: (elevated ? c.surfaceRaised : c.surface).withValues(alpha: c.cardOpacity),
             borderRadius: BorderRadius.circular(borderRadius),
-            border: Border.all(color: borderColor ?? AdminPalette.hairline, width: 0.6),
+            border: Border.all(color: borderColor ?? c.hairline, width: 0.8),
+            boxShadow: c.isDark
+                ? null
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4))],
           ),
           child: child,
         ),
@@ -83,10 +163,10 @@ class GlassPanel extends StatelessWidget {
   }
 }
 
-/// A tactical pill button. Deliberately avoids large saturated fills —
-/// `filled` reads as a *soft-glow* accent chip (low-opacity tint +
-/// glowing hairline + colored text), not a solid block. `danger` swaps
-/// the accent for a muted crimson glow instead of a bright red slab.
+/// A tactical pill button. Avoids large saturated fills — `filled` reads
+/// as a soft-glow accent chip (low-opacity tint + glowing hairline +
+/// colored text), not a solid block. `danger` swaps the accent for a
+/// muted crimson glow instead of a bright red slab.
 class AdminPillButton extends StatefulWidget {
   const AdminPillButton({
     super.key,
@@ -114,12 +194,13 @@ class _AdminPillButtonState extends State<AdminPillButton> {
 
   @override
   Widget build(BuildContext context) {
-    final tint = widget.color ?? (widget.danger ? AdminPalette.danger : AdminPalette.accent);
+    final c = AdminColors.of(context);
+    final tint = widget.color ?? (widget.danger ? c.danger : c.accent);
     final isSoftFill = widget.filled;
 
-    final background = isSoftFill ? tint.withValues(alpha: _hovered ? 0.20 : 0.13) : Colors.transparent;
-    final border = isSoftFill ? tint.withValues(alpha: _hovered ? 0.65 : 0.4) : AdminPalette.hairlineBright;
-    final foreground = isSoftFill ? tint : AdminPalette.textPrimary.withValues(alpha: _hovered ? 1 : 0.85);
+    final background = isSoftFill ? tint.withValues(alpha: _hovered ? 0.22 : 0.14) : Colors.transparent;
+    final border = isSoftFill ? tint.withValues(alpha: _hovered ? 0.7 : 0.45) : c.hairlineBright;
+    final foreground = isSoftFill ? tint : c.textPrimary.withValues(alpha: _hovered ? 1 : 0.85);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -152,12 +233,7 @@ class _AdminPillButtonState extends State<AdminPillButton> {
                   ],
                   Text(
                     widget.label.toUpperCase(),
-                    style: TextStyle(
-                      color: foreground,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.6,
-                    ),
+                    style: TextStyle(color: foreground, fontSize: 11.5, fontWeight: FontWeight.w700, letterSpacing: 1.6),
                   ),
                 ],
               ),
@@ -180,11 +256,12 @@ class MonoLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return Text(
       text,
       style: TextStyle(
         fontFamily: 'monospace',
-        color: color ?? AdminPalette.textDim,
+        color: color ?? c.textDim,
         fontSize: fontSize,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.2,
@@ -195,20 +272,21 @@ class MonoLabel extends StatelessWidget {
 
 /// A single row in a [GlassMenuButton]'s dropdown.
 class GlassMenuItem {
-  const GlassMenuItem({required this.label, required this.onTap, this.danger = false});
+  const GlassMenuItem({required this.label, required this.onTap, this.icon, this.danger = false});
 
   final String label;
+  final IconData? icon;
   final VoidCallback onTap;
   final bool danger;
 }
 
-/// Full replacement for [PopupMenuButton]: Flutter's default popup can't
-/// be reskinned into real glass (no control over its Material surface),
-/// so this builds the dropdown itself via [OverlayPortal] — a genuine
-/// blurred glass panel with hairline borders and per-row hover states,
-/// anchored to the trigger icon.
+/// Replacement for [PopupMenuButton]: Flutter's default popup can't be
+/// reskinned into real glass (no control over its Material surface), so
+/// this builds the dropdown itself via [OverlayPortal] — a compact glass
+/// card with icon rows and per-row hover states, anchored below the
+/// trigger.
 class GlassMenuButton extends StatefulWidget {
-  const GlassMenuButton({super.key, required this.items, this.icon = Icons.more_vert_rounded});
+  const GlassMenuButton({super.key, required this.items, this.icon = Icons.more_horiz_rounded});
 
   final List<GlassMenuItem> items;
   final IconData icon;
@@ -223,6 +301,7 @@ class _GlassMenuButtonState extends State<GlassMenuButton> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return CompositedTransformTarget(
       link: _link,
       child: OverlayPortal(
@@ -240,19 +319,23 @@ class _GlassMenuButtonState extends State<GlassMenuButton> {
                 link: _link,
                 targetAnchor: Alignment.bottomRight,
                 followerAnchor: Alignment.topRight,
-                offset: const Offset(0, 6),
-                child: _GlassMenuSurface(
-                  items: widget.items,
-                  onSelected: _overlayController.hide,
-                ),
+                offset: const Offset(0, 8),
+                child: _GlassMenuSurface(items: widget.items, onSelected: _overlayController.hide),
               ),
             ],
           );
         },
-        child: IconButton(
-          onPressed: _overlayController.toggle,
-          icon: Icon(widget.icon, color: AdminPalette.textDim, size: 20),
-          splashRadius: 20,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: c.surfaceRaised.withValues(alpha: c.cardOpacity * 0.6),
+            border: Border.all(color: c.hairline),
+          ),
+          child: IconButton(
+            onPressed: _overlayController.toggle,
+            icon: Icon(widget.icon, color: c.textDim, size: 18),
+            splashRadius: 20,
+          ),
         ),
       ),
     );
@@ -267,26 +350,31 @@ class _GlassMenuSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return Align(
       alignment: Alignment.topRight,
       child: Material(
         color: Colors.transparent,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 36, sigmaY: 36),
+            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
-              width: 208,
+              width: 196,
               decoration: BoxDecoration(
-                color: AdminPalette.surfaceRaised.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AdminPalette.hairlineBright, width: 0.6),
+                color: c.surfaceRaised.withValues(alpha: c.cardOpacity),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: c.hairlineBright, width: 0.8),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: c.isDark ? 0.4 : 0.12), blurRadius: 24)],
               ),
-              padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  for (final item in items) _GlassMenuRow(item: item, onSelected: onSelected),
+                  for (var i = 0; i < items.length; i++) ...[
+                    if (i > 0) Divider(height: 1, thickness: 0.6, color: c.hairline, indent: 14, endIndent: 14),
+                    _GlassMenuRow(item: items[i], onSelected: onSelected),
+                  ],
                 ],
               ),
             ),
@@ -312,7 +400,8 @@ class _GlassMenuRowState extends State<_GlassMenuRow> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.item.danger ? AdminPalette.danger : AdminPalette.textPrimary;
+    final c = AdminColors.of(context);
+    final color = widget.item.danger ? c.danger : c.textPrimary;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
@@ -324,11 +413,16 @@ class _GlassMenuRowState extends State<_GlassMenuRow> {
         },
         child: Container(
           width: double.infinity,
-          color: _hovered ? AdminPalette.hairlineBright : Colors.transparent,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-          child: Text(
-            widget.item.label,
-            style: TextStyle(color: color, fontSize: 13.5, fontWeight: FontWeight.w500),
+          color: _hovered ? c.hairline : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              if (widget.item.icon != null) ...[
+                Icon(widget.item.icon, size: 16, color: color.withValues(alpha: 0.85)),
+                const SizedBox(width: 12),
+              ],
+              Text(widget.item.label, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500)),
+            ],
           ),
         ),
       ),
@@ -336,9 +430,7 @@ class _GlassMenuRowState extends State<_GlassMenuRow> {
   }
 }
 
-/// The slow-pulsing glow marking whichever playlist is currently on air —
-/// a soft accent-colored halo plus a thin glowing ring, not a filled
-/// card.
+/// The slow-pulsing ring marking whichever playlist is currently on air.
 class OnAirGlow extends StatefulWidget {
   const OnAirGlow({super.key, required this.child, required this.borderRadius});
 
@@ -361,6 +453,7 @@ class _OnAirGlowState extends State<OnAirGlow> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
@@ -368,9 +461,9 @@ class _OnAirGlowState extends State<OnAirGlow> with SingleTickerProviderStateMix
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.borderRadius),
-            border: Border.all(color: AdminPalette.accent.withValues(alpha: 0.25 * t), width: 0.8),
+            border: Border.all(color: c.accent.withValues(alpha: 0.35 * t), width: 1),
             boxShadow: [
-              BoxShadow(color: AdminPalette.accent.withValues(alpha: 0.18 * t), blurRadius: 28, spreadRadius: -6),
+              BoxShadow(color: c.accent.withValues(alpha: 0.2 * t), blurRadius: 28, spreadRadius: -6),
             ],
           ),
           child: child,
@@ -382,8 +475,7 @@ class _OnAirGlowState extends State<OnAirGlow> with SingleTickerProviderStateMix
 }
 
 /// Large glassy circular progress for the upload flow — a "liquid fill"
-/// ring rather than a linear bar. Shows a percentage readout in the
-/// center when `progress` is known, an indeterminate sweep otherwise.
+/// ring rather than a linear bar.
 class LiquidUploadRing extends StatelessWidget {
   const LiquidUploadRing({super.key, required this.progress, this.size = 56});
 
@@ -392,6 +484,7 @@ class LiquidUploadRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     final pct = progress > 0 ? (progress * 100).clamp(0, 100).toStringAsFixed(0) : null;
     return SizedBox(
       width: size,
@@ -403,20 +496,18 @@ class LiquidUploadRing extends StatelessWidget {
             child: CircularProgressIndicator(
               value: progress > 0 ? progress : null,
               strokeWidth: 2.5,
-              backgroundColor: AdminPalette.hairline,
-              valueColor: const AlwaysStoppedAnimation(AdminPalette.accent),
+              backgroundColor: c.hairline,
+              valueColor: AlwaysStoppedAnimation(c.accent),
             ),
           ),
-          if (pct != null) MonoLabel('$pct%', color: AdminPalette.textPrimary, fontSize: 13),
+          if (pct != null) MonoLabel('$pct%', color: c.textPrimary, fontSize: 13),
         ],
       ),
     );
   }
 }
 
-/// Full-viewport edge glow shown while an upload is in flight — a thin,
-/// intensifying halo hugging the screen's border instead of a
-/// conventional top-of-screen progress bar.
+/// Full-viewport edge glow shown while an upload is in flight.
 class UploadEdgeGlow extends StatelessWidget {
   const UploadEdgeGlow({super.key, required this.progress});
 
@@ -424,18 +515,15 @@ class UploadEdgeGlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     final intensity = 0.12 + (progress.clamp(0, 1) * 0.45);
     return Positioned.fill(
       child: IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
-            border: Border.all(color: AdminPalette.accent.withValues(alpha: intensity), width: 1.5),
+            border: Border.all(color: c.accent.withValues(alpha: intensity), width: 1.5),
             boxShadow: [
-              BoxShadow(
-                color: AdminPalette.accent.withValues(alpha: intensity * 0.5),
-                blurRadius: 36,
-                spreadRadius: -8,
-              ),
+              BoxShadow(color: c.accent.withValues(alpha: intensity * 0.5), blurRadius: 36, spreadRadius: -8),
             ],
           ),
         ),

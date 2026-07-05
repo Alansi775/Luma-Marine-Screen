@@ -10,10 +10,9 @@ import '../providers/auth_providers.dart';
 
 /// Reached only via the hidden long-press gesture on the idle/splash
 /// screen (see shared/widgets/bootstrap_screen.dart) — there's no visible
-/// link to this from normal signage playback. Full-bleed pure black,
-/// deliberately unlike the signage side's adaptive theme (see
-/// `AdminPalette`'s doc comment) — this should read as stepping into a
-/// control room, not a settings page.
+/// link to this from normal signage playback. Follows the system's
+/// light/dark preference (see `AdminColors`'s doc comment) — this should
+/// read as stepping into a control room, not a settings page.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -61,13 +60,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return Scaffold(
-      backgroundColor: AdminPalette.black,
+      backgroundColor: c.background,
       body: Stack(
         children: [
-          // A faint, fixed radial glow behind the panel — the only color
-          // in an otherwise pure-black frame.
-          const Positioned.fill(child: _AmbientGlow()),
+          Positioned.fill(child: _AmbientGlow(color: c.accent, background: c.background)),
           SafeArea(
             child: Stack(
               children: [
@@ -77,7 +75,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   child: IconButton(
                     onPressed: () => context.go(AppRoutes.nowPlaying),
                     icon: const Icon(Icons.arrow_back),
-                    color: AdminPalette.textDim,
+                    color: c.textDim,
                   ),
                 ),
                 Center(
@@ -87,6 +85,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       constraints: const BoxConstraints(maxWidth: 420),
                       child: GlassPanel(
                         borderRadius: 32,
+                        elevated: true,
                         padding: const EdgeInsets.fromLTRB(40, 48, 40, 40),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -94,15 +93,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           children: [
                             const Center(child: BrandLogo(size: 84)),
                             const SizedBox(height: 36),
-                            const Text(
+                            Text(
                               'ADMIN ACCESS',
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AdminPalette.textDim,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 3,
-                              ),
+                              style: TextStyle(color: c.textDim, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 3),
                             ),
                             const SizedBox(height: 36),
                             _AdminTextField(
@@ -123,24 +117,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               Text(
                                 _errorMessage!,
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: AdminPalette.danger, fontSize: 13),
+                                style: TextStyle(color: c.danger, fontSize: 13),
                               ),
                             ],
                             const SizedBox(height: 28),
                             Align(
                               alignment: Alignment.center,
                               child: _isSubmitting
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                       height: 52,
                                       width: 52,
                                       child: Center(
                                         child: SizedBox(
                                           height: 22,
                                           width: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: AdminPalette.accent,
-                                          ),
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: c.accent),
                                         ),
                                       ),
                                     )
@@ -162,7 +153,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 class _AmbientGlow extends StatelessWidget {
-  const _AmbientGlow();
+  const _AmbientGlow({required this.color, required this.background});
+
+  final Color color;
+  final Color background;
 
   @override
   Widget build(BuildContext context) {
@@ -171,10 +165,7 @@ class _AmbientGlow extends StatelessWidget {
         gradient: RadialGradient(
           center: const Alignment(0, -0.2),
           radius: 1.1,
-          colors: [
-            AdminPalette.accent.withValues(alpha: 0.10),
-            AdminPalette.black,
-          ],
+          colors: [color.withValues(alpha: 0.10), background],
         ),
       ),
     );
@@ -198,11 +189,12 @@ class _AdminTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = AdminColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AdminPalette.surfaceRaised,
+        color: c.surfaceRaised,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AdminPalette.hairline),
+        border: Border.all(color: c.hairline),
       ),
       child: TextField(
         controller: controller,
@@ -210,10 +202,11 @@ class _AdminTextField extends StatelessWidget {
         keyboardType: keyboardType,
         autocorrect: false,
         onSubmitted: onSubmitted,
-        style: const TextStyle(color: AdminPalette.textPrimary),
+        style: TextStyle(color: c.textPrimary),
+        cursorColor: c.accent,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: AdminPalette.textDim),
+          labelStyle: TextStyle(color: c.textDim),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
         ),

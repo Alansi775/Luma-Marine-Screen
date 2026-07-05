@@ -11,6 +11,7 @@ class PlaylistVideoItem {
     required this.sortOrder,
     required this.name,
     this.durationSeconds,
+    this.storagePath,
   });
 
   final String entryId;
@@ -20,4 +21,11 @@ class PlaylistVideoItem {
 
   /// Not populated yet — see backend/schema/firestore-schema.md's "known gaps".
   final int? durationSeconds;
+
+  /// Firebase Storage path (e.g. `videos/{id}.mp4`) — resolved to an
+  /// actual download URL on demand by whoever needs to play or preview
+  /// it (see `_VideoThumbnail` in playlist_detail_screen.dart). Null
+  /// only if the underlying video doc was deleted out from under this
+  /// entry.
+  final String? storagePath;
 }
