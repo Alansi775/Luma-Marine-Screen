@@ -6,6 +6,7 @@ import 'core/di/core_providers.dart';
 import 'core/firebase/firebase_bootstrapper.dart';
 import 'core/logging/platform_logger.dart';
 import 'core/platform/default_app_directories.dart';
+import 'core/platform/platform_thread_watchdog.dart';
 import 'core/platform/video_player_registration.dart';
 
 /// Ordered async setup, run once before `runApp`. Order matters: the
@@ -21,7 +22,8 @@ Future<List<Override>> bootstrap() async {
   registerVideoPlayerPlatform();
 
   final logger = PlatformLogger.consoleOnly();
-  logger.info('Luma Marine starting');
+  logger.info('PANO starting');
+  startPlatformThreadWatchdog(logger);
 
   final directories = DefaultAppDirectories();
   await directories.ensureCreated();
