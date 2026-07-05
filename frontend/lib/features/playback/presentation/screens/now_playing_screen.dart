@@ -5,14 +5,13 @@ import 'package:video_player/video_player.dart';
 
 import '../../../../routing/app_routes.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/widgets/bootstrap_screen.dart';
-import '../../../../shared/widgets/empty_state.dart';
+import '../../../../shared/widgets/pano_idle_screen.dart';
 import '../../../../shared/widgets/sync_activity_badge.dart';
 import '../providers/playback_providers.dart';
 import '../providers/playlist_player_controller.dart';
 
 /// The signage player. Loops through the local playlist forever; falls
-/// back to [BootstrapScreen] whenever there's nothing downloaded yet to
+/// back to [PanoIdleScreen] whenever there's nothing downloaded yet to
 /// play (first boot, empty playlist, or between syncs).
 ///
 /// Long-pressing anywhere on this screen — whatever it's currently
@@ -33,17 +32,13 @@ class NowPlayingScreen extends ConsumerWidget {
           children: [
             Positioned.fill(
               child: resolvedPaths.when(
-                loading: () => const BootstrapScreen(),
-                error: (error, stackTrace) => EmptyState(
-                  icon: Icons.error_outline,
-                  message: 'Unable to load the playlist.\n$error',
-                ),
-                data: (paths) => paths.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.playlist_play,
-                        message: 'No videos synced yet.\nWaiting for the playlist to sync.',
-                      )
-                    : const _VideoPlayerView(),
+                loading: () => const PanoIdleScreen(),
+                // The raw exception is already logged by whoever detected
+                // it (e.g. the sync service) — this is a customer-facing
+                // premium display, not a debug console, so it only shows
+                // a generic, low-key notice rather than the error text.
+                error: (error, stackTrace) => const PanoIdleScreen(statusMessage: 'Reconnecting…'),
+                data: (paths) => paths.isEmpty ? const PanoIdleScreen() : const _VideoPlayerView(),
               ),
             ),
             // Small, non-blocking — never covers the video underneath.
@@ -70,7 +65,7 @@ class _VideoPlayerView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(playlistPlayerControllerProvider);
     if (controller == null || !controller.value.isInitialized) {
-      return const BootstrapScreen();
+      return const PanoIdleScreen();
     }
     return ColoredBox(
       color: Colors.black,

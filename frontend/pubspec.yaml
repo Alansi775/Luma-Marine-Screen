@@ -116,24 +116,23 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# assets/icon/LUMA_MARINE_logo_black.png and _white.png are the real
-# transparent-background logo (light and dark variants). The static app
-# icon below uses the black wordmark; the in-app splash
-# (lib/shared/widgets/bootstrap_screen.dart) picks whichever variant
-# reads correctly against the current theme's background.
+# assets/icon/pano_black.png and _white.png are the full wordmark
+# lockup (wide, 1389x348) — used by BrandLogo for in-app branding, not
+# suitable as an app icon source. pano_icon_black/white.png are a
+# cropped square of just the glyph mark for that instead.
 #
 # There is no flutter_native_splash config here: on flutter-pi there's no
 # OS-level splash surface to hook into before Dart runs anyway —
 # bootstrap_screen.dart is the real splash for every platform this app
 # targets, shown in-app while bootstrap() finishes its async setup.
 flutter_launcher_icons:
-  image_path: "assets/icon/LUMA_MARINE_logo_black.png"
+  image_path: "assets/icon/pano_icon_black.png"
   macos:
     generate: true
-    image_path: "assets/icon/LUMA_MARINE_logo_black.png"
+    image_path: "assets/icon/pano_icon_black.png"
   web:
     generate: true
-    image_path: "assets/icon/LUMA_MARINE_logo_black.png"
+    image_path: "assets/icon/pano_icon_black.png"
     background_color: "#FAFAFA"
     theme_color: "#0E0E0E"
   android: false

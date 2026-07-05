@@ -1,0 +1,36 @@
+{
+  "firestore": {
+    "rules": "backend/firestore.rules"
+  },
+  "storage": {
+    "rules": "backend/storage.rules"
+  },
+  "database": {
+    "rules": "backend/database.rules.json"
+  },
+  "functions": [
+    {
+      "source": "backend/functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log"
+      ]
+    }
+  ],
+  "hosting": {
+    "public": "frontend/build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
