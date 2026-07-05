@@ -56,18 +56,6 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   static const _stallCheckInterval = Duration(seconds: 4);
   static const _stallChecksBeforeRecovery = 2;
 
-  /// On-device evidence (2026-07-05): every observed stall was caught at
-  /// a position of a few milliseconds — a pipeline that never produced a
-  /// single frame, not one that played for a while and then genuinely
-  /// froze mid-stream. The generic stall watchdog above still needs
-  /// [_stallCheckInterval] × [_stallChecksBeforeRecovery] (8s) to notice
-  /// that, because it's tuned for genuine mid-playback stalls, which are
-  /// rare. A failed *start* is common enough (and distinguishable early)
-  /// that it's worth its own much tighter check, so viewers see a broken
-  /// video for ~2s instead of ~8s before it's skipped.
-  static const _startFailureCheckDelay = Duration(seconds: 2);
-  static const _startFailureThreshold = Duration(milliseconds: 150);
-
   /// On-device evidence (2026-07-05): even though `dispose()` itself
   /// always completes well within its own timeout, the *next* video's
   /// pipeline was frequently failing to ever produce a frame (caught by
@@ -82,13 +70,11 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   String? _currentPath;
   bool _advancing = false;
   Timer? _stallWatchdog;
-  Timer? _startFailureTimer;
 
   @override
   VideoPlayerController? build() {
     ref.onDispose(() {
       _stallWatchdog?.cancel();
-      _startFailureTimer?.cancel();
       state?.dispose();
     });
 
@@ -137,7 +123,6 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
     // native player is a far smaller problem than a signage screen that
     // never recovers.
     _stallWatchdog?.cancel();
-    _startFailureTimer?.cancel();
     final previous = state;
     state = null;
     if (previous != null) {
@@ -177,17 +162,6 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
         await controller.play().timeout(_initializeTimeout);
         state = controller;
         _startStallWatchdog(controller, path, logger);
-        _startFailureTimer = Timer(_startFailureCheckDelay, () {
-          if (state != controller || _advancing) return;
-          if (controller.value.position <= _startFailureThreshold) {
-            _advancing = true;
-            logger.warning(
-              'Video produced no frames within ${_startFailureCheckDelay.inSeconds}s of starting '
-              '(native play() reported success) — recovering early: $path',
-            );
-            unawaited(_recoverFromStall(controller));
-          }
-        });
         return;
       } on TimeoutException {
         logger.warning(
@@ -245,7 +219,6 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   }
 
   Future<void> _recoverFromStall(VideoPlayerController stuck) async {
-    _startFailureTimer?.cancel();
     if (state == stuck) state = null;
     try {
       await stuck.dispose().timeout(_disposeTimeout);
