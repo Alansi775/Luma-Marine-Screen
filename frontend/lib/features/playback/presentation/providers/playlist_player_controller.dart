@@ -56,6 +56,16 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   static const _stallCheckInterval = Duration(seconds: 4);
   static const _stallChecksBeforeRecovery = 2;
 
+  /// On-device evidence (2026-07-05): even though `dispose()` itself
+  /// always completes well within its own timeout, the *next* video's
+  /// pipeline was frequently failing to ever produce a frame (caught by
+  /// the stall watchdog at ~0ms) — on a large fraction of transitions,
+  /// not as a rare edge case. `dispose()` returning to Dart doesn't
+  /// guarantee flutter-pi's native side has fully released the shared
+  /// VAAPI decoder context yet; this settling gap gives it room to
+  /// finish before the next pipeline tries to claim it.
+  static const _decoderSettleDelay = Duration(milliseconds: 400);
+
   List<String> _queue = [];
   String? _currentPath;
   bool _advancing = false;
@@ -124,6 +134,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
           'abandoning it and continuing anyway',
         );
       }
+      await Future<void>.delayed(_decoderSettleDelay);
     }
 
     for (var attempt = 1; attempt <= _maxAttemptsPerVideo; attempt++) {
@@ -215,6 +226,10 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
       // Same tradeoff as everywhere else here: a leaked native player beats
       // a screen that never recovers.
     }
+    // Disposed directly here rather than through _playAt's own
+    // previous-controller path (state is already null by this point), so
+    // the settle delay has to be repeated here too.
+    await Future<void>.delayed(_decoderSettleDelay);
     await _playNext();
   }
 }
