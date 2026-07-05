@@ -17,7 +17,7 @@ class SyncActivityBadge extends ConsumerWidget {
     if (activity == null) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
-    const label = 'Updating playlist…';
+    const label = 'Liste güncelleniyor…';
 
     return DecoratedBox(
       decoration: BoxDecoration(

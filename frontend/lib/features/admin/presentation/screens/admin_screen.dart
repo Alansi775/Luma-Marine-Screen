@@ -20,7 +20,7 @@ class AdminScreen extends ConsumerWidget {
   }
 
   Future<void> _createPlaylist(BuildContext context, WidgetRef ref) async {
-    final name = await _promptForName(context, title: 'New Playlist', initialValue: '');
+    final name = await _promptForName(context, title: 'Yeni Liste', initialValue: '');
     if (name == null || name.trim().isEmpty) return;
     try {
       final id = await ref.read(playlistManagementRepositoryProvider).createPlaylist(name.trim());
@@ -31,7 +31,7 @@ class AdminScreen extends ConsumerWidget {
   }
 
   Future<void> _renamePlaylist(BuildContext context, WidgetRef ref, AdminPlaylist playlist) async {
-    final name = await _promptForName(context, title: 'Rename Playlist', initialValue: playlist.name);
+    final name = await _promptForName(context, title: 'Listeyi Yeniden Adlandır', initialValue: playlist.name);
     if (name == null || name.trim().isEmpty) return;
     try {
       await ref.read(playlistManagementRepositoryProvider).renamePlaylist(playlist.id, name.trim());
@@ -44,12 +44,12 @@ class AdminScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => _AdminDialog(
-        title: 'Delete Playlist',
-        body: 'Delete "${playlist.name}" and remove all its videos from it? '
-            'The videos themselves stay in the catalog.',
+        title: 'Listeyi Sil',
+        body: '"${playlist.name}" silinsin ve içindeki tüm videolar listeden kaldırılsın mı? '
+            'Videoların kendisi katalogda kalmaya devam eder.',
         actions: [
-          AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context, false)),
-          AdminPillButton(label: 'Delete', danger: true, onPressed: () => Navigator.pop(context, true)),
+          AdminPillButton(label: 'İptal', filled: false, onPressed: () => Navigator.pop(context, false)),
+          AdminPillButton(label: 'Sil', danger: true, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -79,8 +79,8 @@ class AdminScreen extends ConsumerWidget {
         title: title,
         field: controller,
         actions: [
-          AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context)),
-          AdminPillButton(label: 'Save', onPressed: () => Navigator.pop(context, controller.text)),
+          AdminPillButton(label: 'İptal', filled: false, onPressed: () => Navigator.pop(context)),
+          AdminPillButton(label: 'Kaydet', onPressed: () => Navigator.pop(context, controller.text)),
         ],
       ),
     );
@@ -122,12 +122,12 @@ class AdminScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'CONTROL CENTER',
+                          'KONTROL MERKEZİ',
                           style: TextStyle(color: c.textDim, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 4),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          email ?? 'Luma Node',
+                          email ?? 'PANO Düğümü',
                           style: TextStyle(color: c.textPrimary, fontSize: 16, fontWeight: FontWeight.w500, letterSpacing: -0.5),
                         ),
                       ],
@@ -139,7 +139,7 @@ class AdminScreen extends ConsumerWidget {
                         onPressed: () => _signOut(context, ref),
                         icon: const Icon(Icons.power_settings_new_rounded, size: 20),
                         color: c.textDim,
-                        tooltip: 'Sign out',
+                        tooltip: 'Çıkış Yap',
                         splashRadius: 24,
                       ),
                     ),
@@ -156,12 +156,12 @@ class AdminScreen extends ConsumerWidget {
               Expanded(
                 child: playlists.when(
                   loading: () => Center(child: CircularProgressIndicator(color: c.accent)),
-                  error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'System fault.\n$e'),
+                  error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Sistem hatası.\n$e'),
                   data: (items) {
                     if (items.isEmpty) {
                       return const EmptyState(
                         icon: Icons.layers_clear_outlined,
-                        message: 'No sequences detected.\nInitialize a new playlist to broadcast.',
+                        message: 'Hiçbir dizi tespit edilmedi.\nYayın yapmak için yeni bir liste başlat.',
                       );
                     }
                     final active = items.where((p) => p.id == activePlaylistId).firstOrNull;
@@ -215,7 +215,7 @@ class AdminScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
                 child: AdminPillButton(
-                  label: 'Initialize Playlist',
+                  label: 'Liste Başlat',
                   icon: Icons.add_rounded,
                   filled: false,
                   onPressed: () => _createPlaylist(context, ref),
@@ -278,12 +278,12 @@ class _MasterOnAirModule extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 24),
-              AdminPillButton(label: 'Halt Station', danger: true, onPressed: onToggleActive),
+              AdminPillButton(label: 'İstasyonu Durdur', danger: true, onPressed: onToggleActive),
               const SizedBox(width: 8),
               GlassMenuButton(
                 items: [
-                  GlassMenuItem(label: 'Rename Sequence', icon: Icons.edit_outlined, onTap: onRename),
-                  GlassMenuItem(label: 'Terminate Sequence', icon: Icons.delete_outline, danger: true, onTap: onDelete),
+                  GlassMenuItem(label: 'Diziyi Yeniden Adlandır', icon: Icons.edit_outlined, onTap: onRename),
+                  GlassMenuItem(label: 'Diziyi Sonlandır', icon: Icons.delete_outline, danger: true, onTap: onDelete),
                 ],
               ),
             ],
@@ -343,12 +343,12 @@ class _PlaylistCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              AdminPillButton(label: 'Deploy', onPressed: onToggleActive),
+              AdminPillButton(label: 'Yayınla', onPressed: onToggleActive),
               const SizedBox(width: 8),
               GlassMenuButton(
                 items: [
-                  GlassMenuItem(label: 'Rename Sequence', icon: Icons.edit_outlined, onTap: onRename),
-                  GlassMenuItem(label: 'Terminate Sequence', icon: Icons.delete_outline, danger: true, onTap: onDelete),
+                  GlassMenuItem(label: 'Diziyi Yeniden Adlandır', icon: Icons.edit_outlined, onTap: onRename),
+                  GlassMenuItem(label: 'Diziyi Sonlandır', icon: Icons.delete_outline, danger: true, onTap: onDelete),
                 ],
               ),
             ],

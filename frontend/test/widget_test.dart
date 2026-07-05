@@ -54,7 +54,7 @@ void main() {
 
     // Empty playlist -> PanoIdleScreen (the standby screen), identified by
     // its caption rather than an error/empty-state message.
-    expect(find.text('P A N O   S Y S T E M S'), findsOneWidget);
+    expect(find.text('B E K L E M E D E'), findsOneWidget);
 
     // Tear the tree down within the test body (rather than relying on
     // testWidgets' implicit teardown) so the drift stream's dispose-time

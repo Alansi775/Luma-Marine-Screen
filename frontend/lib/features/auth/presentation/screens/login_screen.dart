@@ -52,7 +52,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // FirebaseAuthRepository is documented to throw, but a silent
       // "nothing happened" on an unexpected error type is worse than an
       // unpolished message.
-      setState(() => _errorMessage = 'Sign-in failed: $e');
+      setState(() => _errorMessage = 'Giriş başarısız: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -95,21 +95,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const Center(child: BrandLogo(size: 84)),
                             const SizedBox(height: 36),
                             Text(
-                              'ADMIN ACCESS',
+                              'YÖNETİCİ ERİŞİMİ',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: c.textDim, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 3),
                             ),
                             const SizedBox(height: 36),
                             AdminTextField(
                               controller: _emailController,
-                              label: 'Email',
+                              label: 'E-posta',
                               keyboardType: TextInputType.emailAddress,
                               onSubmitted: (_) => _submit(),
                             ),
                             const SizedBox(height: 14),
                             AdminTextField(
                               controller: _passwordController,
-                              label: 'Password',
+                              label: 'Şifre',
                               obscureText: true,
                               onSubmitted: (_) => _submit(),
                             ),
@@ -136,7 +136,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         ),
                                       ),
                                     )
-                                  : AdminPillButton(label: 'Sign In', onPressed: _submit),
+                                  : AdminPillButton(label: 'Giriş Yap', onPressed: _submit),
                             ),
                           ],
                         ),

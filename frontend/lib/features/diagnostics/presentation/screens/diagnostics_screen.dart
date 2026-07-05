@@ -21,30 +21,30 @@ class DiagnosticsScreen extends ConsumerWidget {
     final syncService = ref.watch(syncServiceProvider);
 
     return AppScaffold(
-      title: 'Diagnostics',
+      title: 'Tanılama',
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 8),
-          _DiagnosticRow(label: 'Device ID', value: deviceId.when(
+          _DiagnosticRow(label: 'Cihaz Kimliği', value: deviceId.when(
             data: (id) => id,
-            loading: () => 'resolving…',
-            error: (e, _) => 'unavailable',
+            loading: () => 'çözümleniyor…',
+            error: (e, _) => 'kullanılamıyor',
           )),
           _DiagnosticRow(
             label: 'Firebase',
-            value: firebaseAvailable ? 'connected' : 'offline',
+            value: firebaseAvailable ? 'bağlı' : 'çevrimdışı',
           ),
           _DiagnosticRow(
-            label: 'Sync engine',
-            value: syncService.isAvailable ? 'available' : 'unavailable',
+            label: 'Senkronizasyon motoru',
+            value: syncService.isAvailable ? 'kullanılabilir' : 'kullanılamıyor',
           ),
-          _DiagnosticRow(label: 'Data directory', value: directories.appDataDirectoryPath),
-          _DiagnosticRow(label: 'Videos directory', value: directories.videosDirectoryPath),
-          _DiagnosticRow(label: 'Logs directory', value: directories.logsDirectoryPath),
+          _DiagnosticRow(label: 'Veri dizini', value: directories.appDataDirectoryPath),
+          _DiagnosticRow(label: 'Video dizini', value: directories.videosDirectoryPath),
+          _DiagnosticRow(label: 'Günlük dizini', value: directories.logsDirectoryPath),
           _DiagnosticRow(
-            label: 'Storage ready',
-            value: directories.isReady ? 'yes' : 'no (using fallback or unwritable)',
+            label: 'Depolama hazır',
+            value: directories.isReady ? 'evet' : 'hayır (yedek kullanılıyor veya yazılamıyor)',
           ),
         ],
       ),

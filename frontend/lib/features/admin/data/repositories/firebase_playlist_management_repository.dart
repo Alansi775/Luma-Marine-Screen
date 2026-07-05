@@ -40,7 +40,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       });
       return doc.id;
     } catch (e) {
-      throw NetworkException('Failed to create playlist', cause: e);
+      throw NetworkException('Liste oluşturulamadı', cause: e);
     }
   }
 
@@ -52,7 +52,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      throw NetworkException('Failed to rename playlist', cause: e);
+      throw NetworkException('Liste yeniden adlandırılamadı', cause: e);
     }
   }
 
@@ -64,7 +64,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      throw NetworkException('Failed to update playlist schedule', cause: e);
+      throw NetworkException('Liste zamanlaması güncellenemedi', cause: e);
     }
   }
 
@@ -90,7 +90,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       }
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to delete playlist', cause: e);
+      throw NetworkException('Liste silinemedi', cause: e);
     }
   }
 
@@ -134,7 +134,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       await _deleteVideoIfOrphaned(videoId);
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to remove video from playlist', cause: e);
+      throw NetworkException('Video listeden kaldırılamadı', cause: e);
     }
   }
 
@@ -190,7 +190,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       await batch.commit();
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to move video', cause: e);
+      throw NetworkException('Video taşınamadı', cause: e);
     }
   }
 
@@ -205,7 +205,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       await batch.commit();
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to reorder playlist', cause: e);
+      throw NetworkException('Liste sıralaması değiştirilemedi', cause: e);
     }
   }
 
@@ -215,7 +215,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       await _firestore.collection(FirestorePaths.videos).doc(videoId).update({'name': name});
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to rename video', cause: e);
+      throw NetworkException('Video yeniden adlandırılamadı', cause: e);
     }
   }
 
@@ -230,7 +230,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
       await _defaultDevice.set({'activePlaylistId': playlistId}, SetOptions(merge: true));
       await _notifyDevice();
     } catch (e) {
-      throw NetworkException('Failed to set active playlist', cause: e);
+      throw NetworkException('Aktif liste ayarlanamadı', cause: e);
     }
   }
 
@@ -246,7 +246,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
 
 /// Used when Firebase failed to initialize.
 class UnavailablePlaylistManagementRepository implements PlaylistManagementRepository {
-  Never _unavailable() => throw const NetworkException('Firebase is unavailable right now.');
+  Never _unavailable() => throw const NetworkException('Firebase şu anda kullanılamıyor.');
 
   @override
   Stream<List<AdminPlaylist>> watchPlaylists() => Stream.value(const []);

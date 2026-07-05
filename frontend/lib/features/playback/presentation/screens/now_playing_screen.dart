@@ -37,7 +37,7 @@ class NowPlayingScreen extends ConsumerWidget {
                 // it (e.g. the sync service) — this is a customer-facing
                 // premium display, not a debug console, so it only shows
                 // a generic, low-key notice rather than the error text.
-                error: (error, stackTrace) => const PanoIdleScreen(statusMessage: 'Reconnecting…'),
+                error: (error, stackTrace) => const PanoIdleScreen(statusMessage: 'Yeniden bağlanıyor…'),
                 data: (paths) => paths.isEmpty ? const PanoIdleScreen() : const _VideoPlayerView(),
               ),
             ),

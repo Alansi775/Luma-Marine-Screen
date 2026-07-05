@@ -1,11 +1,11 @@
 {
-    "name": "Luma Marine",
-    "short_name": "Luma Marine",
+    "name": "PANO",
+    "short_name": "PANO",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FAFAFA",
     "theme_color": "#0E0E0E",
-    "description": "Luma Marine digital signage",
+    "description": "PANO dijital tabela sistemi",
     "orientation": "landscape-primary",
     "prefer_related_applications": false,
     "icons": [

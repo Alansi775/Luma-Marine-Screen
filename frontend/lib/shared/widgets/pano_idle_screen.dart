@@ -84,7 +84,7 @@ class _PanoIdleScreenState extends State<PanoIdleScreen> with SingleTickerProvid
                   ),
                   const SizedBox(height: 28),
                   Text(
-                    'P A N O   S Y S T E M S',
+                    'B E K L E M E D E',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,

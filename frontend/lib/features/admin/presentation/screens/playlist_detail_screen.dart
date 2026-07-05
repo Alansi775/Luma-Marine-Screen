@@ -49,7 +49,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             playlistId: widget.playlistId,
             onProgress: (p) => setState(() => _progress = p),
           );
-      setState(() => _message = 'Node synced: "${file.name}".');
+      setState(() => _message = 'Düğüm senkronize edildi: "${file.name}".');
     } on NetworkException catch (e) {
       setState(() => _message = e.message);
     } finally {
@@ -58,13 +58,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   Future<void> _renamePlaylist(AdminPlaylist playlist) async {
-    final name = await _promptForText(title: 'Rename Sequence', initialValue: playlist.name);
+    final name = await _promptForText(title: 'Diziyi Yeniden Adlandır', initialValue: playlist.name);
     if (name == null || name.trim().isEmpty) return;
     await ref.read(playlistManagementRepositoryProvider).renamePlaylist(playlist.id, name.trim());
   }
 
   Future<void> _renameVideo(PlaylistVideoItem item) async {
-    final name = await _promptForText(title: 'Rename Media', initialValue: item.name);
+    final name = await _promptForText(title: 'Medyayı Yeniden Adlandır', initialValue: item.name);
     if (name == null || name.trim().isEmpty) return;
     await ref.read(playlistManagementRepositoryProvider).renameVideo(item.videoId, name.trim());
     ref.invalidate(playlistEntriesProvider(widget.playlistId));
@@ -89,7 +89,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final c = AdminColors.of(context);
     if (candidates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('No alternate arrays available for transfer.'),
+        content: const Text('Aktarım için uygun başka liste yok.'),
         backgroundColor: c.surfaceRaised,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ));
@@ -113,7 +113,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
                   child: Text(
-                    'TRANSFER TO',
+                    'ŞURAYA AKTAR',
                     style: TextStyle(color: c.textDim, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2),
                   ),
                 ),
@@ -183,9 +183,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context)),
+                    AdminPillButton(label: 'İptal', filled: false, onPressed: () => Navigator.pop(context)),
                     const SizedBox(width: 12),
-                    AdminPillButton(label: 'Save', onPressed: () => Navigator.pop(context, controller.text)),
+                    AdminPillButton(label: 'Kaydet', onPressed: () => Navigator.pop(context, controller.text)),
                   ],
                 ),
               ],
@@ -204,7 +204,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', //
+    'Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara', //
   ];
 
   String? _formatUploadedAt(DateTime? dt) {
@@ -212,9 +212,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final local = dt.toLocal();
     final hour24 = local.hour;
     final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
-    final period = hour24 < 12 ? 'AM' : 'PM';
+    final period = hour24 < 12 ? 'ÖÖ' : 'ÖS';
     final minute = local.minute.toString().padLeft(2, '0');
-    return '${_months[local.month - 1]} ${local.day}, ${local.year} · $hour12:$minute $period';
+    return '${local.day} ${_months[local.month - 1]} ${local.year} · $hour12:$minute $period';
   }
 
   @override
@@ -247,7 +247,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
-                            playlist?.name ?? 'Loading Sequence...',
+                            playlist?.name ?? 'Dizi Yükleniyor...',
                             style: TextStyle(color: c.textPrimary, fontSize: 28, fontWeight: FontWeight.w600, letterSpacing: -1),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -259,7 +259,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                               onPressed: () => _renamePlaylist(playlist),
                               icon: const Icon(Icons.edit_rounded, size: 20),
                               color: c.textPrimary,
-                              tooltip: 'Edit Sequence',
+                              tooltip: 'Diziyi Düzenle',
                             ),
                           ),
                       ],
@@ -270,11 +270,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                   Expanded(
                     child: entries.when(
                       loading: () => Center(child: CircularProgressIndicator(color: c.accent)),
-                      error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Data failure.\n$e'),
+                      error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Veri hatası.\n$e'),
                       data: (items) => items.isEmpty
                           ? const EmptyState(
                               icon: Icons.movie_filter_outlined,
-                              message: 'Sequence is empty.\nInject media below.',
+                              message: 'Dizi boş.\nAşağıdan medya ekle.',
                             )
                           : GridView.builder(
                               padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
@@ -334,9 +334,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('TRANSMITTING', style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
+                                Text('AKTARILIYOR', style: TextStyle(color: c.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
                                 const SizedBox(height: 4),
-                                Text('Synchronizing node data...', style: TextStyle(color: c.textDim, fontSize: 14)),
+                                Text('Düğüm verisi senkronize ediliyor...', style: TextStyle(color: c.textDim, fontSize: 14)),
                               ],
                             ),
                           ),
@@ -345,7 +345,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                             Expanded(child: Text(_message!, style: TextStyle(color: c.textDim, fontSize: 14)))
                           else
                             const Spacer(),
-                          AdminPillButton(label: 'Inject Media', icon: Icons.upload_rounded, onPressed: _pickAndUpload),
+                          AdminPillButton(label: 'Medya Ekle', icon: Icons.upload_rounded, onPressed: _pickAndUpload),
                         ],
                       ],
                     ),
@@ -408,9 +408,9 @@ class _VideoGridCell extends StatelessWidget {
                   right: 8,
                   child: GlassMenuButton(
                     items: [
-                      GlassMenuItem(label: 'Rename', icon: Icons.edit_outlined, onTap: onRename),
-                      GlassMenuItem(label: 'Transfer…', icon: Icons.drive_file_move_outline, onTap: onMove),
-                      GlassMenuItem(label: 'Extract', icon: Icons.delete_outline, danger: true, onTap: onRemove),
+                      GlassMenuItem(label: 'Yeniden Adlandır', icon: Icons.edit_outlined, onTap: onRename),
+                      GlassMenuItem(label: 'Aktar…', icon: Icons.drive_file_move_outline, onTap: onMove),
+                      GlassMenuItem(label: 'Çıkar', icon: Icons.delete_outline, danger: true, onTap: onRemove),
                     ],
                   ),
                 ),

@@ -54,7 +54,7 @@ class FirebaseVideoUploadService implements VideoUploadService {
 
       await _appendToPlaylist(playlistId, videoId);
     } catch (e) {
-      throw NetworkException('Video upload failed', cause: e);
+      throw NetworkException('Video yükleme başarısız', cause: e);
     }
   }
 
@@ -81,6 +81,6 @@ class UnavailableVideoUploadService implements VideoUploadService {
     required String playlistId,
     void Function(double progress)? onProgress,
   }) async {
-    throw const NetworkException('Firebase is unavailable, cannot upload right now.');
+    throw const NetworkException('Firebase şu anda kullanılamıyor, yükleme yapılamıyor.');
   }
 }

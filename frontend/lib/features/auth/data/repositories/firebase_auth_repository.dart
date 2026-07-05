@@ -35,11 +35,11 @@ class FirebaseAuthRepository implements AuthRepository {
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        return 'Incorrect email or password.';
+        return 'E-posta veya şifre hatalı.';
       case 'too-many-requests':
-        return 'Too many attempts. Try again later.';
+        return 'Çok fazla deneme yapıldı. Daha sonra tekrar deneyin.';
       default:
-        return e.message ?? 'Sign-in failed.';
+        return e.message ?? 'Giriş başarısız.';
     }
   }
 }
@@ -58,7 +58,7 @@ class UnavailableAuthRepository implements AuthRepository {
 
   @override
   Future<void> signIn({required String email, required String password}) async {
-    throw const AuthException('Firebase is unavailable, cannot sign in right now.');
+    throw const AuthException('Firebase şu anda kullanılamıyor, giriş yapılamıyor.');
   }
 
   @override
