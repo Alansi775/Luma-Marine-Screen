@@ -70,10 +70,15 @@ class _PanoIdleScreenState extends State<PanoIdleScreen> with SingleTickerProvid
                     animation: _controller,
                     builder: (context, child) {
                       final phase = math.sin(_controller.value * 2 * math.pi);
-                      return Opacity(
-                        opacity: 0.85 + 0.15 * phase,
-                        child: Transform.scale(scale: 0.94 + 0.06 * phase, child: child),
-                      );
+                      // Scale-only breathing, deliberately no Opacity here:
+                      // Opacity forces an offscreen saveLayer, which this
+                      // device's GPU compositing has been unreliable with
+                      // (confirmed on-device 2026-07-05 — the logo loaded
+                      // without error but never actually composited to
+                      // screen while wrapped in Opacity). Transform.scale
+                      // alone is a plain matrix transform with no
+                      // offscreen layer, and doesn't hit that.
+                      return Transform.scale(scale: 0.94 + 0.06 * phase, child: child);
                     },
                     child: const BrandLogo(size: 160),
                   ),
