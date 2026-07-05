@@ -143,6 +143,13 @@ class FirestoreSyncService extends SyncService {
     final storagePath = data['storagePath'] as String;
     final checksum = data['checksum'] as String?;
     final sizeBytes = data['sizeBytes'] as int?;
+    // `playbackPath` is written by the processUploadedVideo Cloud Function
+    // only when the original exceeds this device's decode envelope (see
+    // backend/functions/index.js) — a separate, resized copy for this
+    // device to actually play. The original at `storagePath` is never
+    // modified, so it's still what admin/catalog code deals in.
+    final playbackPath = data['playbackPath'] as String?;
+    final downloadPath = playbackPath ?? storagePath;
 
     final existing =
         await (_db.select(_db.videos)..where((t) => t.id.equals(videoId))).getSingleOrNull();
@@ -153,11 +160,11 @@ class FirestoreSyncService extends SyncService {
         await File(existing.localFilePath!).exists();
     if (upToDate) return;
 
-    final extension = storagePath.contains('.') ? storagePath.split('.').last : 'mp4';
+    final extension = downloadPath.contains('.') ? downloadPath.split('.').last : 'mp4';
     final localPath = p.join(_directories.videosDirectoryPath, '$videoId.$extension');
 
     _logger.info('Downloading video $videoId');
-    final url = await FirebaseStorage.instance.ref(storagePath).getDownloadURL();
+    final url = await FirebaseStorage.instance.ref(downloadPath).getDownloadURL();
     final tempPath = '$localPath.part';
     await _dio.download(url, tempPath);
     await File(tempPath).rename(localPath);

@@ -9,10 +9,20 @@ service firebase.storage {
       allow write: if request.auth != null;
     }
 
-    // Written only by the generateVideoThumbnail Cloud Function via the
+    // Written only by the processUploadedVideo Cloud Function via the
     // Admin SDK, which bypasses these rules entirely — `allow write: if
     // false` here is just making that explicit, not actually gating it.
     match /thumbnails/{thumbnailId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Device-safe transcoded copy, generated only when an original in
+    // videos/ exceeds the signage hardware's decode envelope. The
+    // original is never modified or deleted — this is purely additive,
+    // so full-quality source is always preserved even if the video the
+    // device actually plays is a resized copy.
+    match /videos_playback/{videoId} {
       allow read: if true;
       allow write: if false;
     }

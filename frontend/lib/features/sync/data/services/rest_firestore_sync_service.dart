@@ -212,6 +212,14 @@ class RestFirestoreSyncService extends SyncService {
     }
     final checksum = _stringField(fields, 'checksum');
     final sizeBytes = _intField(fields, 'sizeBytes');
+    // `playbackPath` is written by the processUploadedVideo Cloud Function
+    // only when the original exceeds this device's decode envelope (see
+    // backend/functions/index.js) — a separate, resized copy for this
+    // device to actually play. The original at `storagePath` is never
+    // modified, so it's still what admin/catalog code deals in; this is
+    // the one and only place playback prefers the resized copy instead.
+    final playbackPath = _stringField(fields, 'playbackPath');
+    final downloadPath = playbackPath ?? storagePath;
 
     final existing =
         await (_db.select(_db.videos)..where((t) => t.id.equals(videoId))).getSingleOrNull();
@@ -222,9 +230,9 @@ class RestFirestoreSyncService extends SyncService {
         await File(existing.localFilePath!).exists();
     if (upToDate) return;
 
-    final extension = storagePath.contains('.') ? storagePath.split('.').last : 'mp4';
+    final extension = downloadPath.contains('.') ? downloadPath.split('.').last : 'mp4';
     final localPath = p.join(_directories.videosDirectoryPath, '$videoId.$extension');
-    final encodedPath = Uri.encodeComponent(storagePath);
+    final encodedPath = Uri.encodeComponent(downloadPath);
     final downloadUrl = 'https://firebasestorage.googleapis.com/v0/b/$_bucket/o/$encodedPath?alt=media';
 
     _logger.info('Downloading video $videoId');
