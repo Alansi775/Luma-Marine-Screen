@@ -276,47 +276,25 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                               icon: Icons.movie_filter_outlined,
                               message: 'Dizi boş.\nAşağıdan medya ekle.',
                             )
-                          : GridView.builder(
-                              padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
-                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 300,
-                                mainAxisExtent: 264,
-                                crossAxisSpacing: 20,
-                                mainAxisSpacing: 20,
-                              ),
-                              itemCount: items.length,
-                              itemBuilder: (context, i) {
-                                final item = items[i];
-                                final cell = _VideoGridCell(
-                                  key: ValueKey('cell-${item.entryId}'),
-                                  item: item,
-                                  durationLabel: _formatDuration(item.durationSeconds),
-                                  uploadedAtLabel: _formatUploadedAt(item.uploadedAt),
-                                  onRename: () => _renameVideo(item),
-                                  onMove: () => _moveVideo(item),
-                                  onRemove: () => _removeVideo(item),
-                                );
-                                return DragTarget<int>(
-                                  onWillAcceptWithDetails: (details) => details.data != i,
-                                  onAcceptWithDetails: (details) => _reorder(items, details.data, i),
-                                  builder: (context, candidateData, rejectedData) {
-                                    final isDropTarget = candidateData.isNotEmpty;
-                                    return AnimatedScale(
-                                      scale: isDropTarget ? 1.04 : 1.0,
-                                      duration: const Duration(milliseconds: 120),
-                                      child: LongPressDraggable<int>(
-                                        data: i,
-                                        feedback: Material(
-                                          color: Colors.transparent,
-                                          child: SizedBox(width: 260, height: 200, child: Opacity(opacity: 0.9, child: cell)),
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (items.length > 1)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(40, 0, 40, 12),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.drag_indicator_rounded, size: 14, color: c.textDim),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Oynatma sırasını değiştirmek için kartları sürükleyip bırakın',
+                                          style: TextStyle(color: c.textDim, fontSize: 12),
                                         ),
-                                        childWhenDragging: Opacity(opacity: 0.3, child: cell),
-                                        child: cell,
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
+                                      ],
+                                    ),
+                                  ),
+                                Expanded(child: _buildGrid(items)),
+                              ],
                             ),
                     ),
                   ),
@@ -360,16 +338,69 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       ),
     );
   }
+
+  Widget _buildGrid(List<PlaylistVideoItem> items) {
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 300,
+        mainAxisExtent: 264,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 20,
+      ),
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final item = items[i];
+        final cell = _VideoGridCell(
+          key: ValueKey('cell-${item.entryId}'),
+          item: item,
+          order: i + 1,
+          durationLabel: _formatDuration(item.durationSeconds),
+          uploadedAtLabel: _formatUploadedAt(item.uploadedAt),
+          onRename: () => _renameVideo(item),
+          onMove: () => _moveVideo(item),
+          onRemove: () => _removeVideo(item),
+        );
+        return DragTarget<int>(
+          onWillAcceptWithDetails: (details) => details.data != i,
+          onAcceptWithDetails: (details) => _reorder(items, details.data, i),
+          builder: (context, candidateData, rejectedData) {
+            final isDropTarget = candidateData.isNotEmpty;
+            return AnimatedScale(
+              scale: isDropTarget ? 1.04 : 1.0,
+              duration: const Duration(milliseconds: 120),
+              // Plain Draggable (not LongPressDraggable): this is a
+              // mouse-driven web admin panel, and requiring a
+              // press-and-hold before a card can be dragged isn't an
+              // obvious gesture there — a normal click-and-drag reads
+              // immediately as "this is reorderable."
+              child: Draggable<int>(
+                data: i,
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: SizedBox(width: 260, height: 200, child: Opacity(opacity: 0.9, child: cell)),
+                ),
+                childWhenDragging: Opacity(opacity: 0.3, child: cell),
+                child: cell,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 /// One video's card: a cached thumbnail of its actual first frame, its
-/// duration as a corner badge, its name, upload date/time, and a glass
-/// menu — the whole card is the drag handle (long-press to pick it up),
-/// so there's no separate drag-indicator icon to get wrong.
+/// play order and duration as corner badges, its name, upload
+/// date/time, and a glass menu — the whole card is the drag handle
+/// (click and drag to pick it up), so there's no separate
+/// drag-indicator icon to get wrong.
 class _VideoGridCell extends StatelessWidget {
   const _VideoGridCell({
     super.key,
     required this.item,
+    required this.order,
     required this.durationLabel,
     required this.uploadedAtLabel,
     required this.onRename,
@@ -378,6 +409,7 @@ class _VideoGridCell extends StatelessWidget {
   });
 
   final PlaylistVideoItem item;
+  final int order;
   final String? durationLabel;
   final String? uploadedAtLabel;
   final VoidCallback onRename;
@@ -402,6 +434,28 @@ class _VideoGridCell extends StatelessWidget {
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: _VideoThumbnail(videoId: item.videoId, thumbnailPath: item.thumbnailPath),
+                ),
+                // The play order — the whole point of dragging these
+                // cards around is to control this number, so it needs to
+                // be immediately visible, not something the admin has to
+                // infer from grid position alone.
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.background.withValues(alpha: 0.75),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: c.hairlineBright, width: 0.8),
+                    ),
+                    child: Text(
+                      '$order',
+                      style: TextStyle(color: c.textPrimary, fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: 8,
