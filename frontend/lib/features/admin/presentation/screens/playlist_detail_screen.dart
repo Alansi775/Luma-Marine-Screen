@@ -1,14 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:video_player/video_player.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -405,7 +401,7 @@ class _VideoGridCell extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: _VideoThumbnail(videoId: item.videoId, storagePath: item.storagePath),
+                  child: _VideoThumbnail(videoId: item.videoId, thumbnailPath: item.thumbnailPath),
                 ),
                 Positioned(
                   top: 8,
@@ -458,149 +454,81 @@ class _VideoGridCell extends StatelessWidget {
   }
 }
 
-/// Shows the video's actual first frame — cached after the first
-/// generation (see `ThumbnailCache`), so re-opening a playlist never
-/// re-pays the cost of spinning up a decoder per video again.
+/// Shows the video's server-generated thumbnail (see
+/// backend/functions/index.js), resolved to a download URL once and
+/// cached (see `ThumbnailCache`) so re-opening a playlist doesn't
+/// re-fetch it.
 ///
-/// Generation path (cache miss only): create a `VideoPlayerController`,
-/// let it buffer frame 0, render it once into an off-tree
-/// `RepaintBoundary`, capture that as a PNG, cache the bytes, then
-/// immediately dispose the controller. Holding one real decoder per
-/// grid cell indefinitely — which is what this used to do — is exactly
-/// the kind of resource pressure the signage side's playback watchdog
-/// had to be built to survive; there is no reason the admin panel
-/// should create the same problem for itself just to show a preview.
+/// This used to capture a frame client-side via a live
+/// `VideoPlayerController` + `RepaintBoundary.toImage()`. That doesn't
+/// work on Flutter Web: `video_player` there renders through a real
+/// HTML `<video>` element composited outside Flutter's own canvas, so
+/// `toImage()` can never see an actual frame — confirmed empirically
+/// (every capture came back as a ~250-byte blank PNG, regardless of how
+/// long it waited first). Generating the thumbnail server-side sidesteps
+/// that entirely and scales the same at 3 videos or 3 million, since the
+/// admin UI never touches a decoder at all — it just displays an image.
 class _VideoThumbnail extends ConsumerStatefulWidget {
-  const _VideoThumbnail({required this.videoId, required this.storagePath});
+  const _VideoThumbnail({required this.videoId, required this.thumbnailPath});
 
   final String videoId;
-  final String? storagePath;
+  final String? thumbnailPath;
 
   @override
   ConsumerState<_VideoThumbnail> createState() => _VideoThumbnailState();
 }
 
 class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
-  final _boundaryKey = GlobalKey();
-  VideoPlayerController? _controller;
-  Uint8List? _bytes;
+  String? _url;
   bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    final cached = ref.read(thumbnailCacheProvider).get(widget.videoId);
-    debugPrint('THUMB[${widget.videoId}] initState, cached=${cached != null}');
-    if (cached != null) {
-      _bytes = cached;
-    } else {
-      _generate();
-    }
+    _resolve();
   }
 
   @override
   void didUpdateWidget(covariant _VideoThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoId != widget.videoId) {
-      debugPrint('THUMB[${widget.videoId}] didUpdateWidget: videoId CHANGED from ${oldWidget.videoId}');
+    // Firestore delivers the thumbnailPath a few seconds after upload,
+    // once the Cloud Function finishes — this is what picks that up
+    // without the admin needing to refresh anything.
+    if (oldWidget.thumbnailPath != widget.thumbnailPath) {
+      _url = null;
+      _failed = false;
+      _resolve();
     }
   }
 
-  Future<void> _generate() async {
-    final path = widget.storagePath;
-    debugPrint('THUMB[${widget.videoId}] generate start, storagePath=$path');
-    if (path == null) {
-      setState(() => _failed = true);
+  Future<void> _resolve() async {
+    final path = widget.thumbnailPath;
+    if (path == null) return;
+    final cached = ref.read(thumbnailCacheProvider).get(widget.videoId);
+    if (cached != null) {
+      setState(() => _url = cached);
       return;
     }
     try {
       final url = await FirebaseStorage.instance.ref(path).getDownloadURL();
-      debugPrint('THUMB[${widget.videoId}] got download URL');
-      final controller = VideoPlayerController.networkUrl(Uri.parse(url));
-      await controller.initialize();
-      debugPrint('THUMB[${widget.videoId}] controller initialized, size=${controller.value.size}');
-      if (!mounted) {
-        debugPrint('THUMB[${widget.videoId}] unmounted after initialize, aborting');
-        unawaited(controller.dispose());
-        return;
-      }
-      setState(() => _controller = controller);
-      // Two frames plus a short delay: the first post-frame callback can
-      // fire before the video texture has actually painted anything
-      // (a real gotcha with hardware-texture-backed video on web), which
-      // would capture a blank frame and cache it forever.
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      if (mounted) {
-        await _capture();
-      } else {
-        debugPrint('THUMB[${widget.videoId}] unmounted before capture, aborting');
-      }
-    } catch (e, st) {
-      debugPrint('THUMB[${widget.videoId}] generate FAILED: $e\n$st');
+      ref.read(thumbnailCacheProvider).put(widget.videoId, url);
+      if (mounted) setState(() => _url = url);
+    } catch (_) {
       if (mounted) setState(() => _failed = true);
     }
-  }
-
-  Future<void> _capture() async {
-    try {
-      final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary == null) {
-        debugPrint('THUMB[${widget.videoId}] capture FAILED: no boundary render object');
-        setState(() => _failed = true);
-        return;
-      }
-      final image = await boundary.toImage(pixelRatio: 1.0);
-      debugPrint('THUMB[${widget.videoId}] captured image ${image.width}x${image.height}');
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      image.dispose();
-      final bytes = byteData!.buffer.asUint8List();
-      debugPrint('THUMB[${widget.videoId}] captured ${bytes.length} PNG bytes');
-      ref.read(thumbnailCacheProvider).put(widget.videoId, bytes);
-
-      final controller = _controller;
-      _controller = null;
-      unawaited(controller?.dispose());
-
-      if (mounted) {
-        setState(() => _bytes = bytes);
-        debugPrint('THUMB[${widget.videoId}] _bytes set, should render now');
-      } else {
-        debugPrint('THUMB[${widget.videoId}] unmounted right after capture, bytes cached but not shown here');
-      }
-    } catch (e, st) {
-      debugPrint('THUMB[${widget.videoId}] capture FAILED: $e\n$st');
-      if (mounted) setState(() => _failed = true);
-    }
-  }
-
-  @override
-  void dispose() {
-    debugPrint('THUMB[${widget.videoId}] DISPOSED (hadBytes=${_bytes != null})');
-    _controller?.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
-    final bytes = _bytes;
-    if (bytes != null) {
-      return Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true);
-    }
-
-    final controller = _controller;
-    if (controller != null && controller.value.isInitialized) {
-      // Rendered at real size so the captured PNG matches what a viewer
-      // would actually see, not a scaled-down preview.
-      return RepaintBoundary(
-        key: _boundaryKey,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: controller.value.size.width,
-            height: controller.value.size.height,
-            child: VideoPlayer(controller),
-          ),
+    final url = _url;
+    if (url != null) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => ColoredBox(
+          color: c.surfaceRaised,
+          child: Center(child: Icon(Icons.movie_outlined, color: c.textDim, size: 28)),
         ),
       );
     }

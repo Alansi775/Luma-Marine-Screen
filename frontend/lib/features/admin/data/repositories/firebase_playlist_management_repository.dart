@@ -115,6 +115,7 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
           name: (videoData?['name'] as String?) ?? '(deleted video)',
           durationSeconds: videoData?['durationSeconds'] as int?,
           storagePath: videoData?['storagePath'] as String?,
+          thumbnailPath: videoData?['thumbnailPath'] as String?,
           uploadedAt: (videoData?['createdAt'] as Timestamp?)?.toDate(),
         ));
       }
@@ -152,12 +153,15 @@ class FirebasePlaylistManagementRepository implements PlaylistManagementReposito
 
     final videoDoc = await _firestore.collection(FirestorePaths.videos).doc(videoId).get();
     final storagePath = videoDoc.data()?['storagePath'] as String?;
-    if (storagePath != null) {
+    final thumbnailPath = videoDoc.data()?['thumbnailPath'] as String?;
+    for (final path in [storagePath, thumbnailPath]) {
+      if (path == null) continue;
       try {
-        await _storage.ref(storagePath).delete();
+        await _storage.ref(path).delete();
       } on FirebaseException catch (e) {
-        // Already gone (e.g. a previous delete partially succeeded) —
-        // still remove the catalog doc below rather than leaving it stuck.
+        // Already gone (e.g. a previous delete partially succeeded, or the
+        // thumbnail-generation function never got to run) — still remove
+        // the catalog doc below rather than leaving it stuck.
         if (e.code != 'object-not-found') rethrow;
       }
     }

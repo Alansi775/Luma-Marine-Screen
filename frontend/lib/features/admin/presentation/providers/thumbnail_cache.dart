@@ -1,25 +1,23 @@
-import 'dart:typed_data';
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'thumbnail_cache.g.dart';
 
-/// In-memory, app-session-lifetime cache of generated video thumbnail
-/// PNGs, keyed by videoId. Generating a thumbnail means spinning up a
-/// real `VideoPlayerController` (a full decoder) just to grab its first
-/// frame — fine once, wasteful to repeat every time the admin re-opens a
-/// playlist they were just looking at. Keyed by videoId (not entryId) so
-/// moving a video between playlists doesn't lose its cached thumbnail,
-/// and adding one new video never touches the cache entries for videos
-/// already generated.
+/// In-memory, app-session-lifetime cache of resolved thumbnail download
+/// URLs, keyed by videoId — avoids re-calling `getDownloadURL()` (a
+/// network round-trip) every time a playlist screen re-renders. The
+/// actual image bytes are cached by Flutter's own `Image.network`/
+/// `ImageCache` once a URL is known, so this only needs to remember the
+/// URL itself. Keyed by videoId (not entryId) so moving a video between
+/// playlists keeps its cached URL, and one new video never touches the
+/// cache entries for videos already resolved.
 class ThumbnailCache {
-  final Map<String, Uint8List> _bytes = {};
+  final Map<String, String> _urls = {};
 
-  Uint8List? get(String videoId) => _bytes[videoId];
+  String? get(String videoId) => _urls[videoId];
 
-  void put(String videoId, Uint8List bytes) => _bytes[videoId] = bytes;
+  void put(String videoId, String url) => _urls[videoId] = url;
 
-  void evict(String videoId) => _bytes.remove(videoId);
+  void evict(String videoId) => _urls.remove(videoId);
 }
 
 @Riverpod(keepAlive: true)
