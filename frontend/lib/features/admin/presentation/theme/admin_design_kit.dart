@@ -325,7 +325,7 @@ class _AdminPillButtonState extends State<AdminPillButton> {
 /// has almost no contrast and reads as a hole in the layout rather than
 /// an input. `surfaceRaised` gives it a visible, comfortable-contrast
 /// surface in both themes.
-class AdminTextField extends StatelessWidget {
+class AdminTextField extends StatefulWidget {
   const AdminTextField({
     super.key,
     required this.controller,
@@ -344,6 +344,17 @@ class AdminTextField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
 
   @override
+  State<AdminTextField> createState() => _AdminTextFieldState();
+}
+
+class _AdminTextFieldState extends State<AdminTextField> {
+  // Starts obscured whenever the field is declared as one (e.g. a
+  // password field) — `widget.obscureText` itself stays the field's
+  // fixed *kind* (password vs. plain), while this tracks the user's
+  // show/hide toggle for that one field.
+  late bool _obscured = widget.obscureText;
+
+  @override
   Widget build(BuildContext context) {
     final c = AdminColors.of(context);
     // A single InputDecoration owns the shape (fill + border) — no
@@ -357,16 +368,16 @@ class AdminTextField extends StatelessWidget {
       borderSide: BorderSide(color: c.hairlineBright, width: 0.8),
     );
     return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      autofocus: autofocus,
+      controller: widget.controller,
+      obscureText: _obscured,
+      keyboardType: widget.keyboardType,
+      autofocus: widget.autofocus,
       autocorrect: false,
-      onSubmitted: onSubmitted,
+      onSubmitted: widget.onSubmitted,
       style: TextStyle(color: c.textPrimary, fontSize: 15),
       cursorColor: c.accent,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: widget.label,
         labelStyle: TextStyle(color: c.textDim),
         filled: true,
         fillColor: c.surfaceRaised,
@@ -374,6 +385,17 @@ class AdminTextField extends StatelessWidget {
         enabledBorder: border,
         focusedBorder: border.copyWith(borderSide: BorderSide(color: c.accent, width: 1.2)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        suffixIcon: widget.obscureText
+            ? IconButton(
+                icon: Icon(
+                  _obscured ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: c.textDim,
+                  size: 20,
+                ),
+                splashRadius: 20,
+                onPressed: () => setState(() => _obscured = !_obscured),
+              )
+            : null,
       ),
     );
   }
