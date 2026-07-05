@@ -490,6 +490,7 @@ class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
   void initState() {
     super.initState();
     final cached = ref.read(thumbnailCacheProvider).get(widget.videoId);
+    debugPrint('THUMB[${widget.videoId}] initState, cached=${cached != null}');
     if (cached != null) {
       _bytes = cached;
     } else {
@@ -497,17 +498,29 @@ class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
     }
   }
 
+  @override
+  void didUpdateWidget(covariant _VideoThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoId != widget.videoId) {
+      debugPrint('THUMB[${widget.videoId}] didUpdateWidget: videoId CHANGED from ${oldWidget.videoId}');
+    }
+  }
+
   Future<void> _generate() async {
     final path = widget.storagePath;
+    debugPrint('THUMB[${widget.videoId}] generate start, storagePath=$path');
     if (path == null) {
       setState(() => _failed = true);
       return;
     }
     try {
       final url = await FirebaseStorage.instance.ref(path).getDownloadURL();
+      debugPrint('THUMB[${widget.videoId}] got download URL');
       final controller = VideoPlayerController.networkUrl(Uri.parse(url));
       await controller.initialize();
+      debugPrint('THUMB[${widget.videoId}] controller initialized, size=${controller.value.size}');
       if (!mounted) {
+        debugPrint('THUMB[${widget.videoId}] unmounted after initialize, aborting');
         unawaited(controller.dispose());
         return;
       }
@@ -516,9 +529,14 @@ class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
       // fire before the video texture has actually painted anything
       // (a real gotcha with hardware-texture-backed video on web), which
       // would capture a blank frame and cache it forever.
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-      if (mounted) await _capture();
-    } catch (_) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        await _capture();
+      } else {
+        debugPrint('THUMB[${widget.videoId}] unmounted before capture, aborting');
+      }
+    } catch (e, st) {
+      debugPrint('THUMB[${widget.videoId}] generate FAILED: $e\n$st');
       if (mounted) setState(() => _failed = true);
     }
   }
@@ -527,27 +545,37 @@ class _VideoThumbnailState extends ConsumerState<_VideoThumbnail> {
     try {
       final boundary = _boundaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
+        debugPrint('THUMB[${widget.videoId}] capture FAILED: no boundary render object');
         setState(() => _failed = true);
         return;
       }
       final image = await boundary.toImage(pixelRatio: 1.0);
+      debugPrint('THUMB[${widget.videoId}] captured image ${image.width}x${image.height}');
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       final bytes = byteData!.buffer.asUint8List();
+      debugPrint('THUMB[${widget.videoId}] captured ${bytes.length} PNG bytes');
       ref.read(thumbnailCacheProvider).put(widget.videoId, bytes);
 
       final controller = _controller;
       _controller = null;
       unawaited(controller?.dispose());
 
-      if (mounted) setState(() => _bytes = bytes);
-    } catch (_) {
+      if (mounted) {
+        setState(() => _bytes = bytes);
+        debugPrint('THUMB[${widget.videoId}] _bytes set, should render now');
+      } else {
+        debugPrint('THUMB[${widget.videoId}] unmounted right after capture, bytes cached but not shown here');
+      }
+    } catch (e, st) {
+      debugPrint('THUMB[${widget.videoId}] capture FAILED: $e\n$st');
       if (mounted) setState(() => _failed = true);
     }
   }
 
   @override
   void dispose() {
+    debugPrint('THUMB[${widget.videoId}] DISPOSED (hadBytes=${_bytes != null})');
     _controller?.dispose();
     super.dispose();
   }
