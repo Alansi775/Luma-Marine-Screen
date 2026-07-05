@@ -52,7 +52,9 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('No videos synced yet.\nWaiting for the playlist to sync.'), findsOneWidget);
+    // Empty playlist -> PanoIdleScreen (the standby screen), identified by
+    // its caption rather than an error/empty-state message.
+    expect(find.text('P A N O   S Y S T E M S'), findsOneWidget);
 
     // Tear the tree down within the test body (rather than relying on
     // testWidgets' implicit teardown) so the drift stream's dispose-time
