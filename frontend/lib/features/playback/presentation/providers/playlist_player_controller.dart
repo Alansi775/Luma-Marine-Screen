@@ -143,15 +143,30 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
           ? VideoPlayerController.networkUrl(Uri.parse(path))
           : VideoPlayerController.file(File(path));
 
+      // flutter-pi's native duration query is unreliable *throughout*
+      // playback, not just at startup — "Could not fetch duration" recurs
+      // in its logs every few seconds for the entire time a video plays.
+      // Trusting the live `controller.value.duration` on every listener
+      // tick meant a single transient bad query (reporting a shorter, or
+      // zero, duration) made "remaining" look like the video had already
+      // finished, cutting it off at a random point mid-playback — the
+      // "some videos don't play their full length" bug. This only ever
+      // grows, so a later bad/short query can't undo an earlier good one.
+      var knownDuration = Duration.zero;
+
       controller.addListener(() {
         if (_advancing || !controller.value.isInitialized) return;
+        if (controller.value.duration > knownDuration) {
+          knownDuration = controller.value.duration;
+        }
         // Exact position == duration is unreliable — the platform's last
         // position update often lands a few hundred milliseconds short of
-        // the true end, so isCompleted alone can just never become true
-        // and the playlist stalls forever on the last video. A small
-        // tolerance catches "effectively finished" the same way.
-        final remaining = controller.value.duration - controller.value.position;
-        if (controller.value.isCompleted || remaining <= const Duration(milliseconds: 300)) {
+        // the true end, so waiting for an exact match can stall forever.
+        // A small tolerance against our own stabilized duration catches
+        // "effectively finished" without trusting the native isCompleted
+        // flag, which is computed from the same unreliable live duration.
+        final remaining = knownDuration - controller.value.position;
+        if (knownDuration > Duration.zero && remaining <= const Duration(milliseconds: 300)) {
           _advancing = true;
           _playNext();
         }
