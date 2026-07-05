@@ -11,12 +11,6 @@ import '../../domain/entities/admin_playlist.dart';
 import '../providers/admin_providers.dart';
 import '../theme/admin_design_kit.dart';
 
-/// Playlist hub — the admin's landing screen. Lists every playlist, shows
-/// which one is currently on air, and is where playlists themselves are
-/// created/renamed/deleted. Uploading videos happens one level down, on
-/// [PlaylistDetailScreen] — there is no upload entry point here, which is
-/// what makes "you must create a playlist before you can upload anything"
-/// true by construction rather than a validation message.
 class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
@@ -54,8 +48,8 @@ class AdminScreen extends ConsumerWidget {
         body: 'Delete "${playlist.name}" and remove all its videos from it? '
             'The videos themselves stay in the catalog.',
         actions: [
-          _DialogAction(label: 'Cancel', onPressed: () => Navigator.pop(context, false)),
-          _DialogAction(label: 'Delete', danger: true, onPressed: () => Navigator.pop(context, true)),
+          AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context, false)),
+          AdminPillButton(label: 'Delete', danger: true, onPressed: () => Navigator.pop(context, true)),
         ],
       ),
     );
@@ -85,15 +79,20 @@ class AdminScreen extends ConsumerWidget {
         title: title,
         field: controller,
         actions: [
-          _DialogAction(label: 'Cancel', onPressed: () => Navigator.pop(context)),
-          _DialogAction(label: 'Save', onPressed: () => Navigator.pop(context, controller.text)),
+          AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context)),
+          AdminPillButton(label: 'Save', onPressed: () => Navigator.pop(context, controller.text)),
         ],
       ),
     );
   }
 
   void _showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(message, style: const TextStyle(color: AdminPalette.textPrimary)),
+      backgroundColor: AdminPalette.surfaceRaised,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
 
   @override
@@ -107,85 +106,220 @@ class AdminScreen extends ConsumerWidget {
       body: SafeArea(
         child: AdminPageWidth(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Premium Header ---
               Padding(
-                padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
+                padding: const EdgeInsets.fromLTRB(40, 48, 40, 32),
                 child: Row(
                   children: [
-                    const BrandLogo(size: 36),
-                    const SizedBox(width: 16),
+                    const BrandLogo(size: 44),
+                    const SizedBox(width: 20),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'PLAYLISTS',
+                          'CONTROL CENTER',
                           style: TextStyle(
                             color: AdminPalette.textDim,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 3,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 4,
                           ),
                         ),
-                        if (email != null) ...[
-                          const SizedBox(height: 2),
-                          Text(email, style: const TextStyle(color: AdminPalette.textDim, fontSize: 12)),
-                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          email ?? 'Luma Node',
+                          style: const TextStyle(
+                            color: AdminPalette.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
                       ],
                     ),
                     const Spacer(),
-                    IconButton(
-                      onPressed: () => _signOut(context, ref),
-                      icon: const Icon(Icons.logout, size: 20),
-                      color: AdminPalette.textDim,
-                      tooltip: 'Sign out',
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AdminPalette.hairline),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: () => _signOut(context, ref),
+                        icon: const Icon(Icons.power_settings_new_rounded, size: 20),
+                        color: AdminPalette.textDim,
+                        tooltip: 'Sign out',
+                        splashRadius: 24,
+                      ),
                     ),
                   ],
                 ),
               ),
+
+              // --- Master Module (On-Air) + secondary grid ---
+              // "Master Module Strategy": the live playlist gets a full-width
+              // hero module, not just a highlighted cell among equals — a
+              // grid of identical cards reads as generic Android/Material,
+              // regardless of theming. Everything else demotes to a dense
+              // technical grid underneath.
               Expanded(
                 child: playlists.when(
-                  loading: () => const SizedBox(),
-                  error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Failed to load playlists.\n$e'),
-                  data: (items) => items.isEmpty
-                      ? const EmptyState(
-                          icon: Icons.playlist_add,
-                          message: 'No playlists yet.\nCreate one to start uploading videos.',
-                        )
-                      : GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(28, 4, 28, 28),
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 420,
-                            mainAxisExtent: 108,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
+                  loading: () => const Center(child: CircularProgressIndicator(color: AdminPalette.accent)),
+                  error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'System fault.\n$e'),
+                  data: (items) {
+                    if (items.isEmpty) {
+                      return const EmptyState(
+                        icon: Icons.layers_clear_outlined,
+                        message: 'No sequences detected.\nInitialize a new playlist to broadcast.',
+                      );
+                    }
+                    final active = items.where((p) => p.id == activePlaylistId).firstOrNull;
+                    final others = items.where((p) => p.id != activePlaylistId).toList();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (active != null)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
+                            child: _MasterOnAirModule(
+                              playlist: active,
+                              onTap: () => context.push(AppRoutes.adminPlaylist(active.id)),
+                              onRename: () => _renamePlaylist(context, ref, active),
+                              onDelete: () => _deletePlaylist(context, ref, active),
+                              onToggleActive: () => _setActive(ref, active, true),
+                            ),
                           ),
-                          itemCount: items.length,
-                          itemBuilder: (context, i) {
-                            final playlist = items[i];
-                            final isActive = playlist.id == activePlaylistId;
-                            return _PlaylistCard(
-                              playlist: playlist,
-                              isActive: isActive,
-                              onTap: () => context.push(AppRoutes.adminPlaylist(playlist.id)),
-                              onRename: () => _renamePlaylist(context, ref, playlist),
-                              onDelete: () => _deletePlaylist(context, ref, playlist),
-                              onToggleActive: () => _setActive(ref, playlist, isActive),
-                            );
-                          },
+                        Expanded(
+                          child: others.isEmpty
+                              ? const SizedBox()
+                              : GridView.builder(
+                                  padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 400,
+                                    mainAxisExtent: 120,
+                                    crossAxisSpacing: 20,
+                                    mainAxisSpacing: 20,
+                                  ),
+                                  itemCount: others.length,
+                                  itemBuilder: (context, i) {
+                                    final playlist = others[i];
+                                    return _PlaylistCard(
+                                      playlist: playlist,
+                                      isActive: false,
+                                      onTap: () => context.push(AppRoutes.adminPlaylist(playlist.id)),
+                                      onRename: () => _renamePlaylist(context, ref, playlist),
+                                      onDelete: () => _deletePlaylist(context, ref, playlist),
+                                      onToggleActive: () => _setActive(ref, playlist, false),
+                                    );
+                                  },
+                                ),
                         ),
+                      ],
+                    );
+                  },
                 ),
               ),
+
+              // --- Footer Action ---
               Padding(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: AdminPillButton(
-                    label: 'New Playlist',
-                    icon: Icons.add,
-                    filled: false,
-                    onPressed: () => _createPlaylist(context, ref),
-                  ),
+                padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
+                child: AdminPillButton(
+                  label: 'Initialize Playlist',
+                  icon: Icons.add_rounded,
+                  filled: false,
+                  onPressed: () => _createPlaylist(context, ref),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "Master Module": the on-air playlist gets a full-width hero, not
+/// just a highlighted cell among equals — see the build-method comment
+/// on why that distinction is the point.
+class _MasterOnAirModule extends StatelessWidget {
+  const _MasterOnAirModule({
+    required this.playlist,
+    required this.onTap,
+    required this.onRename,
+    required this.onDelete,
+    required this.onToggleActive,
+  });
+
+  final AdminPlaylist playlist;
+  final VoidCallback onTap;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+  final VoidCallback onToggleActive;
+
+  @override
+  Widget build(BuildContext context) {
+    return OnAirGlow(
+      borderRadius: 32,
+      child: GlassPanel(
+        borderRadius: 32,
+        elevated: true,
+        padding: const EdgeInsets.fromLTRB(36, 32, 28, 32),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(32),
+          onTap: onTap,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AdminPalette.accent,
+                            shape: BoxShape.circle,
+                            boxShadow: [BoxShadow(color: AdminPalette.accent, blurRadius: 6)],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'BROADCASTING NOW',
+                          style: TextStyle(
+                            color: AdminPalette.accent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      playlist.name,
+                      style: const TextStyle(
+                        color: AdminPalette.textPrimary,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -1,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              AdminPillButton(label: 'Halt Station', danger: true, onPressed: onToggleActive),
+              const SizedBox(width: 8),
+              GlassMenuButton(
+                items: [
+                  GlassMenuItem(label: 'Rename Sequence', onTap: onRename),
+                  GlassMenuItem(label: 'Terminate Sequence', danger: true, onTap: onDelete),
+                ],
               ),
             ],
           ),
@@ -214,7 +348,8 @@ class _PlaylistCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const radius = 24.0;
+    const radius = 28.0; // زوايا محدبة ناعمة جداً
+    
     final card = GlassPanel(
       borderRadius: radius,
       borderColor: isActive ? Colors.transparent : null,
@@ -222,51 +357,60 @@ class _PlaylistCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          padding: const EdgeInsets.all(24),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AdminPalette.surfaceRaised,
-                  borderRadius: BorderRadius.circular(14),
+                  color: isActive ? AdminPalette.accent.withValues(alpha: 0.1) : AdminPalette.surfaceRaised,
+                  borderRadius: BorderRadius.circular(16),
+                  border: isActive ? Border.all(color: AdminPalette.accent.withValues(alpha: 0.3)) : null,
                 ),
-                child: Icon(Icons.queue_music, color: AdminPalette.textPrimary.withValues(alpha: 0.8)),
+                child: Icon(
+                  Icons.layers_rounded, 
+                  color: isActive ? AdminPalette.accent : AdminPalette.textPrimary.withValues(alpha: 0.8),
+                  size: 24,
+                ),
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       playlist.name,
                       style: const TextStyle(
                         color: AdminPalette.textPrimary,
-                        fontSize: 16,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
+                        letterSpacing: -0.5,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (isActive) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(color: AdminPalette.accent, shape: BoxShape.circle),
+                            decoration: const BoxDecoration(
+                              color: AdminPalette.accent,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: AdminPalette.accent, blurRadius: 4)],
+                            ),
                           ),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           const Text(
-                            'ON AIR',
+                            'LIVE STREAM',
                             style: TextStyle(
                               color: AdminPalette.accent,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
                               letterSpacing: 2,
                             ),
                           ),
@@ -277,22 +421,15 @@ class _PlaylistCard extends StatelessWidget {
                 ),
               ),
               AdminPillButton(
-                label: isActive ? 'Stop' : 'Set Live',
+                label: isActive ? 'Halt' : 'Deploy',
                 filled: !isActive,
                 onPressed: onToggleActive,
               ),
-              const SizedBox(width: 4),
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AdminPalette.textDim),
-                color: AdminPalette.surfaceRaised,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                onSelected: (value) {
-                  if (value == 'rename') onRename();
-                  if (value == 'delete') onDelete();
-                },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: AdminPalette.textPrimary))),
-                  PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AdminPalette.danger))),
+              const SizedBox(width: 8),
+              GlassMenuButton(
+                items: [
+                  GlassMenuItem(label: 'Rename Sequence', onTap: onRename),
+                  GlassMenuItem(label: 'Terminate Sequence', danger: true, onTap: onDelete),
                 ],
               ),
             ],
@@ -301,6 +438,7 @@ class _PlaylistCard extends StatelessWidget {
       ),
     );
 
+    // تطبيق الـ Glow السينمائي للقائمة الفعالة فقط
     return isActive ? OnAirGlow(borderRadius: radius, child: card) : card;
   }
 }
@@ -311,77 +449,56 @@ class _AdminDialog extends StatelessWidget {
   final String title;
   final String? body;
   final TextEditingController? field;
-  final List<_DialogAction> actions;
+  final List<Widget> actions;
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(24),
       child: GlassPanel(
-        borderRadius: 28,
+        borderRadius: 32,
         elevated: true,
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(40),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
+          constraints: const BoxConstraints(maxWidth: 440),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 24, fontWeight: FontWeight.w600, letterSpacing: -0.5),
               ),
               const SizedBox(height: 16),
               if (body != null)
-                Text(body!, style: const TextStyle(color: AdminPalette.textDim, height: 1.5)),
+                Text(body!, style: const TextStyle(color: AdminPalette.textDim, fontSize: 15, height: 1.6)),
               if (field != null)
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AdminPalette.surface,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AdminPalette.hairline),
+                    color: AdminPalette.black,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AdminPalette.hairlineBright),
                   ),
                   child: TextField(
                     controller: field,
                     autofocus: true,
-                    style: const TextStyle(color: AdminPalette.textPrimary),
+                    cursorColor: AdminPalette.accent,
+                    style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                     ),
                     onSubmitted: (value) => Navigator.pop(context, value),
                   ),
                 ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [for (final action in actions) ...[action, const SizedBox(width: 12)]],
+                children: actions.expand((action) => [action, const SizedBox(width: 12)]).toList()..removeLast(),
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DialogAction extends StatelessWidget {
-  const _DialogAction({required this.label, required this.onPressed, this.danger = false});
-
-  final String label;
-  final VoidCallback onPressed;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onPressed,
-      child: Text(
-        label.toUpperCase(),
-        style: TextStyle(
-          color: danger ? AdminPalette.danger : AdminPalette.textPrimary,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1,
         ),
       ),
     );

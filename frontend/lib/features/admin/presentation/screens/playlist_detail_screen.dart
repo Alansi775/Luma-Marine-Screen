@@ -10,11 +10,6 @@ import '../../domain/entities/playlist_video_item.dart';
 import '../providers/admin_providers.dart';
 import '../theme/admin_design_kit.dart';
 
-/// One playlist's contents: reorder, rename or remove videos, move a
-/// video to a different playlist, and upload new videos directly into
-/// this playlist. There is no "upload" entry point anywhere else in the
-/// admin panel — a video always belongs to some playlist from the moment
-/// it's uploaded.
 class PlaylistDetailScreen extends ConsumerStatefulWidget {
   const PlaylistDetailScreen({super.key, required this.playlistId});
 
@@ -47,7 +42,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             playlistId: widget.playlistId,
             onProgress: (p) => setState(() => _progress = p),
           );
-      setState(() => _message = 'Uploaded "${file.name}".');
+      setState(() => _message = 'Node synced: "${file.name}".');
     } on NetworkException catch (e) {
       setState(() => _message = e.message);
     } finally {
@@ -56,13 +51,13 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
   }
 
   Future<void> _renamePlaylist(AdminPlaylist playlist) async {
-    final name = await _promptForText(title: 'Rename Playlist', initialValue: playlist.name);
+    final name = await _promptForText(title: 'Rename Sequence', initialValue: playlist.name);
     if (name == null || name.trim().isEmpty) return;
     await ref.read(playlistManagementRepositoryProvider).renamePlaylist(playlist.id, name.trim());
   }
 
   Future<void> _renameVideo(PlaylistVideoItem item) async {
-    final name = await _promptForText(title: 'Rename Video', initialValue: item.name);
+    final name = await _promptForText(title: 'Rename Media', initialValue: item.name);
     if (name == null || name.trim().isEmpty) return;
     await ref.read(playlistManagementRepositoryProvider).renameVideo(item.videoId, name.trim());
     ref.invalidate(playlistEntriesProvider(widget.playlistId));
@@ -80,8 +75,11 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
     final playlists = ref.read(adminPlaylistsProvider).value ?? const <AdminPlaylist>[];
     final candidates = playlists.where((p) => p.id != widget.playlistId).toList();
     if (candidates.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No other playlists to move this into.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('No alternate arrays available for transfer.'),
+        backgroundColor: AdminPalette.surfaceRaised,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
       return;
     }
 
@@ -90,9 +88,9 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: GlassPanel(
-          borderRadius: 28,
+          borderRadius: 24,
           elevated: true,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: Column(
@@ -100,18 +98,20 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  padding: EdgeInsets.fromLTRB(24, 16, 24, 16),
                   child: Text(
-                    'MOVE TO PLAYLIST',
-                    style: TextStyle(color: AdminPalette.textDim, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 2),
+                    'TRANSFER TO',
+                    style: TextStyle(color: AdminPalette.textDim, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2),
                   ),
                 ),
                 for (final p in candidates)
-                  ListTile(
-                    title: Text(p.name, style: const TextStyle(color: AdminPalette.textPrimary)),
+                  InkWell(
                     onTap: () => Navigator.pop(context, p),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: Text(p.name, style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16)),
+                    ),
                   ),
-                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -145,47 +145,42 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: GlassPanel(
-          borderRadius: 28,
+          borderRadius: 32,
           elevated: true,
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(40),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 18, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 16),
+                Text(title, style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 24, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 24),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AdminPalette.surface,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AdminPalette.hairline),
+                    color: AdminPalette.black,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AdminPalette.hairlineBright),
                   ),
                   child: TextField(
                     controller: controller,
                     autofocus: true,
-                    style: const TextStyle(color: AdminPalette.textPrimary),
+                    cursorColor: AdminPalette.accent,
+                    style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                     ),
                     onSubmitted: (value) => Navigator.pop(context, value),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('CANCEL', style: TextStyle(color: AdminPalette.textPrimary, fontWeight: FontWeight.w700)),
-                    ),
+                    AdminPillButton(label: 'Cancel', filled: false, onPressed: () => Navigator.pop(context)),
                     const SizedBox(width: 12),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, controller.text),
-                      child: const Text('SAVE', style: TextStyle(color: AdminPalette.accent, fontWeight: FontWeight.w700)),
-                    ),
+                    AdminPillButton(label: 'Save', onPressed: () => Navigator.pop(context, controller.text)),
                   ],
                 ),
               ],
@@ -217,49 +212,67 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
             child: AdminPageWidth(
               child: Column(
                 children: [
+                  // --- Header ---
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 20, 28, 16),
+                    padding: const EdgeInsets.fromLTRB(24, 40, 40, 32),
                     child: Row(
                       children: [
                         IconButton(
                           onPressed: () => context.pop(),
-                          icon: const Icon(Icons.arrow_back),
-                          color: AdminPalette.textPrimary,
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          color: AdminPalette.textDim,
+                          splashRadius: 24,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: Text(
-                            playlist?.name ?? '…',
+                            playlist?.name ?? 'Loading Sequence...',
                             style: const TextStyle(
                               color: AdminPalette.textPrimary,
-                              fontSize: 22,
+                              fontSize: 28,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: -0.5,
+                              letterSpacing: -1,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (playlist != null)
-                          IconButton(
-                            onPressed: () => _renamePlaylist(playlist),
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            color: AdminPalette.textDim,
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AdminPalette.surfaceRaised,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: IconButton(
+                              onPressed: () => _renamePlaylist(playlist),
+                              icon: const Icon(Icons.edit_rounded, size: 20),
+                              color: AdminPalette.textPrimary,
+                              tooltip: 'Edit Sequence',
+                            ),
                           ),
                       ],
                     ),
                   ),
+
+                  // --- List Area ---
                   Expanded(
                     child: entries.when(
-                      loading: () => const SizedBox(),
-                      error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Failed to load videos.\n$e'),
+                      loading: () => const Center(child: CircularProgressIndicator(color: AdminPalette.accent)),
+                      error: (e, _) => EmptyState(icon: Icons.error_outline, message: 'Data failure.\n$e'),
                       data: (items) => items.isEmpty
                           ? const EmptyState(
-                              icon: Icons.movie_outlined,
-                              message: 'No videos in this playlist yet.\nUpload one below.',
+                              icon: Icons.movie_filter_outlined,
+                              message: 'Sequence is empty.\nInject media below.',
                             )
                           : ReorderableListView.builder(
-                              padding: const EdgeInsets.fromLTRB(28, 4, 28, 28),
+                              padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
                               itemCount: items.length,
+                              proxyDecorator: (child, index, animation) => Material(
+                                color: Colors.transparent,
+                                child: Container(
+                                  decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 20)]),
+                                  child: child,
+                                ),
+                              ),
                               onReorder: (oldIndex, newIndex) => _reorder(items, oldIndex, newIndex),
                               itemBuilder: (context, i) {
                                 final item = items[i];
@@ -276,17 +289,24 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                             ),
                     ),
                   ),
+
+                  // --- Upload Action Bar ---
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+                    padding: const EdgeInsets.fromLTRB(40, 0, 40, 40),
                     child: Row(
                       children: [
                         if (_isUploading) ...[
-                          LiquidUploadRing(progress: _progress, size: 44),
-                          const SizedBox(width: 16),
+                          LiquidUploadRing(progress: _progress, size: 56), // الدائرة الكبيرة للتحميل
+                          const SizedBox(width: 20),
                           const Expanded(
-                            child: Text(
-                              'Uploading…',
-                              style: TextStyle(color: AdminPalette.textDim, fontSize: 13),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text('TRANSMITTING', style: TextStyle(color: AdminPalette.accent, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 2)),
+                                SizedBox(height: 4),
+                                Text('Synchronizing node data...', style: TextStyle(color: AdminPalette.textDim, fontSize: 14)),
+                              ],
                             ),
                           ),
                         ] else ...[
@@ -294,14 +314,14 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
                             Expanded(
                               child: Text(
                                 _message!,
-                                style: const TextStyle(color: AdminPalette.textDim, fontSize: 13),
+                                style: const TextStyle(color: AdminPalette.textDim, fontSize: 14),
                               ),
                             )
                           else
                             const Spacer(),
                           AdminPillButton(
-                            label: 'Upload Video',
-                            icon: Icons.upload_outlined,
+                            label: 'Inject Media',
+                            icon: Icons.upload_rounded,
                             onPressed: _pickAndUpload,
                           ),
                         ],
@@ -312,6 +332,7 @@ class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
               ),
             ),
           ),
+          // التوهج السينمائي العظيم وقت الرفع فقط
           if (_isUploading) UploadEdgeGlow(progress: _progress),
         ],
       ),
@@ -340,51 +361,44 @@ class _VideoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: GlassPanel(
         borderRadius: 20,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            MonoLabel(index.toString().padLeft(2, '0'), color: AdminPalette.textDim.withValues(alpha: 0.5), fontSize: 14),
-            const SizedBox(width: 16),
+            MonoLabel((index + 1).toString().padLeft(2, '0'), color: AdminPalette.textDim.withValues(alpha: 0.5), fontSize: 15),
+            const SizedBox(width: 20),
             Container(
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: AdminPalette.surfaceRaised,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AdminPalette.hairline),
               ),
-              child: Icon(Icons.movie_outlined, size: 20, color: AdminPalette.textPrimary.withValues(alpha: 0.7)),
+              child: Icon(Icons.smart_display_rounded, size: 22, color: AdminPalette.textPrimary.withValues(alpha: 0.8)),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 20),
             Expanded(
               child: Text(
                 item.name,
-                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 15),
+                style: const TextStyle(color: AdminPalette.textPrimary, fontSize: 16, fontWeight: FontWeight.w500),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            MonoLabel(durationLabel),
-            const SizedBox(width: 8),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: AdminPalette.textDim),
-              color: AdminPalette.surfaceRaised,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              onSelected: (value) {
-                if (value == 'rename') onRename();
-                if (value == 'move') onMove();
-                if (value == 'remove') onRemove();
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: AdminPalette.textPrimary))),
-                PopupMenuItem(value: 'move', child: Text('Move to playlist…', style: TextStyle(color: AdminPalette.textPrimary))),
-                PopupMenuItem(value: 'remove', child: Text('Remove from playlist', style: TextStyle(color: AdminPalette.danger))),
+            MonoLabel(durationLabel, fontSize: 14),
+            const SizedBox(width: 16),
+            GlassMenuButton(
+              items: [
+                GlassMenuItem(label: 'Rename', onTap: onRename),
+                GlassMenuItem(label: 'Transfer…', onTap: onMove),
+                GlassMenuItem(label: 'Extract', danger: true, onTap: onRemove),
               ],
             ),
-            const SizedBox(width: 4),
-            Icon(Icons.drag_indicator, color: AdminPalette.textDim.withValues(alpha: 0.4)),
+            const SizedBox(width: 8),
+            Icon(Icons.drag_indicator_rounded, color: AdminPalette.textDim.withValues(alpha: 0.3), size: 24),
           ],
         ),
       ),
