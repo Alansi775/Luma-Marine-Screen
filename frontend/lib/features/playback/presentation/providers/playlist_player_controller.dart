@@ -41,6 +41,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
   /// clean retry usually succeeds, without stalling the whole playlist
   /// for minutes on a video that's genuinely broken.
   static const _initializeTimeout = Duration(seconds: 8);
+  static const _disposeTimeout = Duration(seconds: 5);
   static const _maxAttemptsPerVideo = 2;
 
   List<String> _queue = [];
@@ -83,16 +84,32 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
     _currentPath = path;
     _advancing = false;
 
+    final logger = ref.read(appLoggerProvider);
+
     // Dispose the outgoing controller *before* creating the next one:
     // flutter-pi's GStreamer/VAAPI decode session is a limited shared
     // resource, so briefly having two controllers alive at once makes the
     // new one hang on its first frame waiting for hardware the old one is
-    // still holding.
+    // still holding. This teardown is itself native code that can hit the
+    // same kind of deadlock a stuck startup can (confirmed on-device after
+    // ~76 clean transitions) — awaiting it without a timeout would let one
+    // bad dispose freeze every video after it forever, which defeats the
+    // whole point of the startup watchdog below never getting a chance to
+    // run. If it doesn't finish in time, abandon it and move on; a leaked
+    // native player is a far smaller problem than a signage screen that
+    // never recovers.
     final previous = state;
     state = null;
-    await previous?.dispose();
-
-    final logger = ref.read(appLoggerProvider);
+    if (previous != null) {
+      try {
+        await previous.dispose().timeout(_disposeTimeout);
+      } on TimeoutException {
+        logger.warning(
+          'Previous video controller did not dispose within ${_disposeTimeout.inSeconds}s — '
+          'abandoning it and continuing anyway',
+        );
+      }
+    }
 
     for (var attempt = 1; attempt <= _maxAttemptsPerVideo; attempt++) {
       final isNetworkUrl = path.startsWith('http://') || path.startsWith('https://');
@@ -116,7 +133,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
 
       try {
         await controller.initialize().timeout(_initializeTimeout);
-        await controller.play();
+        await controller.play().timeout(_initializeTimeout);
         state = controller;
         return;
       } on TimeoutException {
@@ -124,7 +141,7 @@ class PlaylistPlayerController extends _$PlaylistPlayerController {
           'Video failed to start within ${_initializeTimeout.inSeconds}s '
           '(attempt $attempt/$_maxAttemptsPerVideo), retrying: $path',
         );
-        unawaited(controller.dispose());
+        unawaited(controller.dispose().timeout(_disposeTimeout, onTimeout: () {}));
       }
     }
 
